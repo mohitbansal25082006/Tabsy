@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Workspace } from '../types/workspace';
 import { workspaceService } from '../services/workspaceService';
 import { IconPicker } from './IconPicker';
@@ -14,9 +14,21 @@ interface WorkspaceEditModalProps {
 
 export function WorkspaceEditModal({ workspace, onClose, onUpdate }: WorkspaceEditModalProps) {
   const [name, setName] = useState(workspace.name);
+  const [category, setCategory] = useState(workspace.category || '');
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [icon, setIcon] = useState(workspace.icon && ICON_NAMES.includes(workspace.icon as any) ? workspace.icon : ICON_NAMES[0]);
   const [color, setColor] = useState(workspace.color || COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    workspaceService.getAllWorkspaces().then(workspaces => {
+      const cats = new Set<string>();
+      workspaces.forEach(w => {
+        if (w.category) cats.add(w.category);
+      });
+      setExistingCategories(Array.from(cats).sort());
+    });
+  }, []);
 
   const handleSave = async () => {
     const trimmedName = name.trim();
@@ -24,8 +36,9 @@ export function WorkspaceEditModal({ workspace, onClose, onUpdate }: WorkspaceEd
 
     setIsSaving(true);
     try {
-      await workspaceService.updateWorkspaceMetadata(workspace.id, trimmedName, icon, color);
-      onUpdate({ ...workspace, name: trimmedName, icon, color, updatedAt: Date.now() });
+      const trimmedCategory = category.trim();
+      await workspaceService.updateWorkspaceMetadata(workspace.id, trimmedName, icon, color, trimmedCategory);
+      onUpdate({ ...workspace, name: trimmedName, icon, color, category: trimmedCategory === '' ? undefined : trimmedCategory, updatedAt: Date.now() });
       onClose();
     } catch (error) {
       console.error('Failed to update workspace:', error);
@@ -44,7 +57,7 @@ export function WorkspaceEditModal({ workspace, onClose, onUpdate }: WorkspaceEd
         </div>
         
         {/* Scrollable Content */}
-        <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-5">
+        <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Name</label>
             <input
@@ -56,6 +69,26 @@ export function WorkspaceEditModal({ workspace, onClose, onUpdate }: WorkspaceEd
             />
           </div>
           
+          <div>
+            <label htmlFor="modal-category" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Group / Category (Optional)
+            </label>
+            <input
+              id="modal-category"
+              type="text"
+              list="modal-categories"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full font-medium text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-sm"
+              placeholder="e.g. Work, Clients..."
+            />
+            <datalist id="modal-categories">
+              {existingCategories.map(cat => (
+                <option key={cat} value={cat} />
+              ))}
+            </datalist>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Icon</label>
             <IconPicker selectedIcon={icon} onSelect={setIcon} />

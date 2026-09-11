@@ -3,6 +3,8 @@ import '../styles/globals.css';
 import { Workspace } from '../types/workspace';
 import { workspaceService } from '../services/workspaceService';
 import { WorkspaceList } from '../components/WorkspaceList';
+import { SearchResults } from '../components/SearchResults';
+import { tabService } from '../services/tabService';
 import { WorkspaceDetails } from '../components/WorkspaceDetails';
 import { CreateWorkspace } from '../components/CreateWorkspace';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -27,6 +29,7 @@ function AppContent() {
   
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [workspaceToEdit, setWorkspaceToEdit] = useState<Workspace | null>(null);
+  const [undoToast, setUndoToast] = useState<{ id: string, name: string } | null>(null);
 
   const loadWorkspaces = async () => {
     setIsLoading(true);
@@ -92,6 +95,7 @@ function AppContent() {
 
   const handleWorkspaceDelete = async (id: string) => {
     try {
+      const wsToDelete = workspaces.find(w => w.id === id);
       await workspaceService.deleteWorkspace(id);
       setWorkspaces(workspaces.filter(w => w.id !== id));
       setWorkspaceToDelete(null);
@@ -99,8 +103,23 @@ function AppContent() {
         setView('list');
         setActiveWorkspaceId(null);
       }
+      if (wsToDelete) {
+        setUndoToast({ id, name: wsToDelete.name });
+        setTimeout(() => setUndoToast(null), 8000); // 8 seconds to undo
+      }
     } catch (error) {
       console.error('Failed to delete workspace:', error);
+    }
+  };
+
+  const handleUndoDelete = async () => {
+    if (!undoToast) return;
+    try {
+      await workspaceService.restoreFromTrash(undoToast.id);
+      setUndoToast(null);
+      loadWorkspaces();
+    } catch (error) {
+      console.error('Failed to undo:', error);
     }
   };
 
@@ -159,21 +178,39 @@ function AppContent() {
             {view === 'list' && (
               <>
                 <SearchBar value={searchQuery} onChange={setSearchQuery} />
-                <WorkspaceList 
-                  workspaces={filteredWorkspaces} 
-                  searchQuery={searchQuery}
-                  onWorkspaceSelect={handleWorkspaceSelect}
-                  onCreateNew={handleCreateNew}
-                  onEditRequest={setWorkspaceToEdit}
-                  onDuplicateRequest={handleWorkspaceDuplicate}
-                  onDeleteRequest={(ws) => {
-                    if (settings.confirmBeforeDeleting) {
-                      setWorkspaceToDelete(ws);
-                    } else {
-                      handleWorkspaceDelete(ws.id);
-                    }
-                  }}
-                />
+                                {searchQuery.trim() ? (
+                  <SearchResults 
+                    workspaces={workspaces}
+                    searchQuery={searchQuery}
+                    onWorkspaceSelect={handleWorkspaceSelect}
+                    onEditRequest={setWorkspaceToEdit}
+                    onDuplicateRequest={handleWorkspaceDuplicate}
+                    onDeleteRequest={(ws) => {
+                      if (settings.confirmBeforeDeleting) {
+                        setWorkspaceToDelete(ws);
+                      } else {
+                        handleWorkspaceDelete(ws.id);
+                      }
+                    }}
+                    onOpenTab={(url, pinned) => tabService.openTab(url, pinned)}
+                  />
+                ) : (
+                  <WorkspaceList 
+                    workspaces={workspaces} 
+                    searchQuery={searchQuery}
+                    onWorkspaceSelect={handleWorkspaceSelect}
+                    onCreateNew={handleCreateNew}
+                    onEditRequest={setWorkspaceToEdit}
+                    onDuplicateRequest={handleWorkspaceDuplicate}
+                    onDeleteRequest={(ws) => {
+                      if (settings.confirmBeforeDeleting) {
+                        setWorkspaceToDelete(ws);
+                      } else {
+                        handleWorkspaceDelete(ws.id);
+                      }
+                    }}
+                  />
+                )}
               </>
             )}
 
@@ -234,6 +271,20 @@ function AppContent() {
           onUpdate={handleWorkspaceUpdate}
         />
       )}
+
+      {undoToast && (
+        <div className="absolute bottom-4 left-4 right-4 bg-gray-900 dark:bg-gray-800 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between z-50 animate-in slide-in-from-bottom-6 fade-in duration-300 border border-gray-700">
+          <span className="text-sm font-medium truncate pr-4 text-gray-200">
+            Deleted <span className="font-bold text-white">"{undoToast.name}"</span>
+          </span>
+          <button 
+            onClick={handleUndoDelete}
+            className="text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-colors"
+          >
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -245,3 +296,4 @@ export default function App() {
     </SettingsProvider>
   );
 }
+

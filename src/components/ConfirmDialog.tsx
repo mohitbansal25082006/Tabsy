@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 interface ConfirmDialogProps {
   title: string;
@@ -67,3 +67,4 @@ export function ConfirmDialog({
     </div>
   );
 }
+

@@ -12,9 +12,14 @@ export interface Workspace {
   name: string;
   icon: string;
   color: string;
+  category?: string;
   tabs: Tab[];
   createdAt: number;
   updatedAt: number;
+}
+
+export interface DeletedWorkspace extends Workspace {
+  deletedAt: number;
 }
 
 export type Theme = 'system' | 'light' | 'dark';

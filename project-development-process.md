@@ -81,3 +81,23 @@ Version 1.1 introduces power-user features to make managing tabs and workspaces 
 * **Streamlined Header UI**: Merged the tab count, sync toggle, and restore buttons into the primary header row for maximum vertical space efficiency.
 * **Robust Pinned Tab Syncing**: Added `chrome.tabs.onMoved` listeners so manual tab reordering/pinning in Chrome instantly syncs to the workspace. Fixed duplicate restoration logic to actively update unpinned browser tabs if the workspace dictates they should be pinned.
 * **Navigation State Fixes**: Solved navigation loops by tracking `previousView` state when accessing Settings, and improved the 'Back' behavior during workspace editing mode.
+
+## Version 1.2
+Version 1.2 focuses on advanced organization, safety mechanisms, and deeper search capabilities.
+
+### Features Implemented in V1.2
+* **Workspace Groups & Folders**: Workspaces can now be categorized and grouped into collapsible folders on the home screen.
+* **Undo Accidental Deletes (Session History)**: Deleting a workspace now shows an 8-second Toast notification with an "Undo" button, backed by a rolling trash queue (`tabsy_trash`) that stores the last 10 deleted workspaces.
+* **Global Deep Search**: Searching now queries tab titles and URLs across *all* workspaces, surfacing matching tabs visually in a dedicated Search Results view.
+* **Advanced Restore Options**: The Restore button now features a dropdown with two modes: "Add to current window" (keeps existing tabs) and "Replace current window" (closes tabs that do not belong to the workspace for a clean context switch).
+
+### Key Files Created & Updated
+* `src/components/SearchResults.tsx` (Created)
+* `src/components/WorkspaceList.tsx`
+* `src/components/WorkspaceDetails.tsx`
+* `src/components/WorkspaceEditModal.tsx`
+* `src/components/CreateWorkspace.tsx`
+* `src/services/storageService.ts`
+* `src/services/workspaceService.ts`
+* `src/sidepanel/App.tsx`
+* `src/types/workspace.ts`

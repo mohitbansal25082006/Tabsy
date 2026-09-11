@@ -1,7 +1,8 @@
-import { Workspace } from '../types/workspace';
+﻿import { Workspace, DeletedWorkspace } from '../types/workspace';
 
 // Using a single storage key storing a Record<string, Workspace> for easy lookup by ID
 const STORAGE_KEY = 'tabsy_workspaces';
+const TRASH_KEY = 'tabsy_trash';
 
 export const storageService = {
   async getAllWorkspaces(): Promise<Workspace[]> {
@@ -40,14 +41,50 @@ export const storageService = {
 
   async deleteWorkspace(id: string): Promise<void> {
     try {
-      const data = await chrome.storage.local.get(STORAGE_KEY);
+      const data = await chrome.storage.local.get([STORAGE_KEY, TRASH_KEY]);
       const workspacesRecord: Record<string, Workspace> = (data[STORAGE_KEY] as Record<string, Workspace>) || {};
-      if (workspacesRecord[id]) {
+      let trash: DeletedWorkspace[] = (data[TRASH_KEY] as DeletedWorkspace[]) || [];
+
+      const workspaceToDelete = workspacesRecord[id];
+      if (workspaceToDelete) {
+        // Add to trash (limit to 10 most recent)
+        const deletedItem: DeletedWorkspace = { ...workspaceToDelete, deletedAt: Date.now() };
+        trash = [deletedItem, ...trash].slice(0, 10);
+        
         delete workspacesRecord[id];
-        await chrome.storage.local.set({ [STORAGE_KEY]: workspacesRecord });
+        await chrome.storage.local.set({ [STORAGE_KEY]: workspacesRecord, [TRASH_KEY]: trash });
       }
     } catch (error) {
       console.error(`Failed to delete workspace ${id}:`, error);
+      throw error;
+    }
+  },
+
+  async getTrash(): Promise<DeletedWorkspace[]> {
+    try {
+      const data = await chrome.storage.local.get(TRASH_KEY);
+      return (data[TRASH_KEY] as DeletedWorkspace[]) || [];
+    } catch (error) {
+      console.error('Failed to get trash:', error);
+      return [];
+    }
+  },
+
+  async restoreFromTrash(id: string): Promise<void> {
+    try {
+      const data = await chrome.storage.local.get([STORAGE_KEY, TRASH_KEY]);
+      const workspacesRecord: Record<string, Workspace> = (data[STORAGE_KEY] as Record<string, Workspace>) || {};
+      let trash: DeletedWorkspace[] = (data[TRASH_KEY] as DeletedWorkspace[]) || [];
+
+      const index = trash.findIndex(w => w.id === id);
+      if (index !== -1) {
+        const [restored] = trash.splice(index, 1);
+        const { deletedAt, ...workspaceData } = restored;
+        workspacesRecord[workspaceData.id] = workspaceData;
+        await chrome.storage.local.set({ [STORAGE_KEY]: workspacesRecord, [TRASH_KEY]: trash });
+      }
+    } catch (error) {
+      console.error(`Failed to restore from trash ${id}:`, error);
       throw error;
     }
   },

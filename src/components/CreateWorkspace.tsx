@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { tabService } from '../services/tabService';
 import { workspaceService } from '../services/workspaceService';
 import { Workspace, Tab } from '../types/workspace';
@@ -15,9 +15,21 @@ interface CreateWorkspaceProps {
 
 export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspaceProps) {
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [icon, setIcon] = useState<string>(ICON_NAMES[0]);
   const [color, setColor] = useState(COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    workspaceService.getAllWorkspaces().then(workspaces => {
+      const cats = new Set<string>();
+      workspaces.forEach(w => {
+        if (w.category) cats.add(w.category);
+      });
+      setExistingCategories(Array.from(cats).sort());
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +40,7 @@ export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspac
     setIsSaving(true);
     try {
       const tabsToSave = seedTab ? [seedTab] : await tabService.getCurrentWindowTabs();
-      const newWorkspace = await workspaceService.createWorkspace(trimmedName, icon, color, tabsToSave);
+      const newWorkspace = await workspaceService.createWorkspace(trimmedName, icon, color, tabsToSave, category.trim());
       onCreated(newWorkspace);
     } catch (error) {
       console.error('Failed to create workspace:', error);
@@ -53,7 +65,7 @@ export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspac
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-4 overflow-y-auto">
-        <div className="mb-6">
+        <div className="mb-4">
           <label htmlFor="name" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
             Name
           </label>
@@ -66,6 +78,26 @@ export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspac
             placeholder="e.g. Research, Travel..."
             autoFocus
           />
+        </div>
+
+        <div className="mb-6">
+          <label htmlFor="category" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            Group / Category (Optional)
+          </label>
+          <input
+            id="category"
+            type="text"
+            list="categories"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full font-medium text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-sm"
+            placeholder="e.g. Work, Clients..."
+          />
+          <datalist id="categories">
+            {existingCategories.map(cat => (
+              <option key={cat} value={cat} />
+            ))}
+          </datalist>
         </div>
 
         <div className="mb-6">

@@ -11,14 +11,15 @@
 
 * **Side Panel Native**: Sits cleanly alongside your web browsing, instantly accessible with a click.
 * **Smart Workspaces**: Save your current open tabs into isolated workspaces (e.g., "Research", "Travel", "Work").
+* **Workspace Groups & Folders (V1.2)**: Categorize your workspaces into collapsible folders for ultimate organization.
+* **Global Deep Search (V1.2)**: Instantly search across all your workspaces to find specific tab titles and URLs.
+* **Advanced Restore Modes (V1.2)**: Choose between "Add to current window" (casual restore) or "Replace current window" (automatically closes irrelevant tabs for a clean context switch).
+* **Undo Accidental Deletes (V1.2)**: A smart trash system with an instant Undo popup protects you from accidentally deleting a workspace.
 * **Live Auto-Sync (V1.1)**: Toggle "Sync" on a workspace to have it automatically track and save your tabs in real-time as you open, close, and rearrange them.
 * **Drag-and-Drop Reordering (V1.1)**: Rearrange tabs within a workspace seamlessly using buttery-smooth drag-and-drop.
-* **Bulk Actions (V1.1)**: Multi-select mode to quickly select, manage, and delete groups of tabs at once.
-* **Advanced Pinned Tab Support (V1.1)**: Pinned tab states are fully tracked, visibly badged, and flawlessly preserved upon restoring a workspace. 
-* **Workspace Duplication (V1.1)**: Instantly clone an entire workspace from the quick actions menu to use as a template.
-* **Restore Instantly**: Open an entire workspace in one click. Duplicates are smartly skipped or updated on the fly.
+* **Advanced Pinned Tab Support (V1.1)**: Pinned tab states are fully tracked, visibly badged, and flawlessly preserved upon restoring a workspace.
+* **Bulk Actions**: Multi-select mode to quickly select, manage, and delete groups of tabs at once.
 * **Beautiful Customization**: Express your spaces using **27 premium Lucide icons** and **18 modern color swatches**. The UI is hyper-optimized for the narrow side-panel format.
-* **Global Shortcuts & Context Menus**: Hit `Ctrl+Shift+S` (or `Cmd+Shift+S` on Mac) to instantly stash your window, or right-click any page and select "Save to Tabsy".
 * **Full Data Portability**: Export your workspace data as a JSON backup, and import it anywhere.
 * **Dark Mode**: Gorgeous out-of-the-box Dark and Light mode themes that sync to your OS or can be toggled manually.
 
@@ -26,7 +27,7 @@
 
 ## 📸 Interface
 
-Tabsy is built using **React**, **Tailwind CSS**, and **Lucide Icons** to deliver a premium, buttery-smooth user experience complete with soft shadows, dynamic hover states, streamlined single-row headers, and beautiful floating modals.
+Tabsy is built using **React**, **Tailwind CSS**, and **Lucide Icons** to deliver a premium, buttery-smooth user experience complete with soft shadows, dynamic hover states, collapsible folders, smart search results, and beautiful floating modals.
 
 ---
 
@@ -87,5 +88,5 @@ Tabsy runs entirely locally on your machine.
 ---
 
 <div align="center">
-  <p>Built for version 1.1.0</p>
+  <p>Built for version 1.2.0</p>
 </div>

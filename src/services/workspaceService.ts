@@ -4,12 +4,13 @@ import { generateId } from '../utils/helpers';
 import { tabService } from './tabService';
 
 export const workspaceService = {
-  async createWorkspace(name: string, icon: string, color: string, tabs: Tab[]): Promise<Workspace> {
+  async createWorkspace(name: string, icon: string, color: string, tabs: Tab[], category?: string): Promise<Workspace> {
     const newWorkspace: Workspace = {
       id: generateId(),
       name,
       icon,
       color,
+      category: category === '' ? undefined : category,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       tabs
@@ -26,12 +27,15 @@ export const workspaceService = {
     return await storageService.getWorkspace(id);
   },
 
-  async updateWorkspaceMetadata(id: string, name: string, icon: string, color: string): Promise<void> {
+  async updateWorkspaceMetadata(id: string, name: string, icon: string, color: string, category?: string): Promise<void> {
     const workspace = await storageService.getWorkspace(id);
     if (workspace) {
       workspace.name = name;
       workspace.icon = icon;
       workspace.color = color;
+      if (category !== undefined) {
+        workspace.category = category === '' ? undefined : category;
+      }
       workspace.updatedAt = Date.now();
       await storageService.saveWorkspace(workspace);
     }
@@ -48,6 +52,14 @@ export const workspaceService = {
 
   async deleteWorkspace(id: string): Promise<void> {
     await storageService.deleteWorkspace(id);
+  },
+
+  async getTrash(): Promise<import('../types/workspace').DeletedWorkspace[]> {
+    return await storageService.getTrash();
+  },
+
+  async restoreFromTrash(id: string): Promise<void> {
+    await storageService.restoreFromTrash(id);
   },
 
   async duplicateWorkspace(id: string): Promise<Workspace | null> {
@@ -93,26 +105,49 @@ export const workspaceService = {
     }
   },
 
-  async restoreWorkspace(id: string): Promise<{ opened: number, skipped: number }> {
+  async restoreWorkspace(id: string, mode: 'add' | 'replace' = 'add'): Promise<{ opened: number, skipped: number, closed?: number }> {
     let opened = 0;
     let skipped = 0;
+    let closed = 0;
     
     const workspace = await storageService.getWorkspace(id);
     const settings = await storageService.getSettings();
     
     if (workspace && workspace.tabs && workspace.tabs.length > 0) {
-      const openTabsMap = settings.checkForDuplicateTabs 
-        ? await tabService.getOpenTabsMapInCurrentWindow()
+      const openTabsMap = await tabService.getOpenTabsMapInCurrentWindow();
+
+      if (mode === 'replace') {
+        // Find tabs that are currently open but not in the workspace
+        const workspaceUrls = new Set(workspace.tabs.map(t => t.url ? tabService.normalizeUrl(t.url) : ''));
+        const tabsToClose: number[] = [];
+        
+        for (const [url, tab] of openTabsMap.entries()) {
+          if (tab.id && !workspaceUrls.has(url)) {
+            tabsToClose.push(tab.id);
+          }
+        }
+
+        if (tabsToClose.length > 0) {
+          // If we are about to close all tabs, Chrome might close the window.
+          // But tab opening happens next, so it's safer to open the new tabs first, THEN close the old ones.
+          // However, for duplicate skipping to work smoothly, let's just flag them for closing later.
+        }
+      }
+      
+      const currentOpenTabsMap = settings.checkForDuplicateTabs || mode === 'replace'
+        ? openTabsMap
         : new Map<string, chrome.tabs.Tab>();
+      
+      const workspaceUrls = new Set(workspace.tabs.map(t => t.url ? tabService.normalizeUrl(t.url) : ''));
       
       for (const tab of workspace.tabs) {
         if (!tab.url) continue;
         
         const normalized = tabService.normalizeUrl(tab.url);
-        if (settings.checkForDuplicateTabs && openTabsMap.has(normalized)) {
+        if ((settings.checkForDuplicateTabs || mode === 'replace') && currentOpenTabsMap.has(normalized)) {
           skipped++;
           // Update pinned state of existing tab if it differs
-          const existingTab = openTabsMap.get(normalized);
+          const existingTab = currentOpenTabsMap.get(normalized);
           if (existingTab && existingTab.id && existingTab.pinned !== tab.pinned) {
             await chrome.tabs.update(existingTab.id, { pinned: tab.pinned });
           }
@@ -120,18 +155,35 @@ export const workspaceService = {
           try {
             await tabService.openTab(tab.url, tab.pinned);
             opened++;
-            if (settings.checkForDuplicateTabs) {
+            if (settings.checkForDuplicateTabs || mode === 'replace') {
               // Mark as opened to prevent duplicates within the same workspace
-              openTabsMap.set(normalized, {} as chrome.tabs.Tab);
+              currentOpenTabsMap.set(normalized, {} as chrome.tabs.Tab);
             }
+          } catch (error) {
+            console.error('Failed to open tab:', error);
+          }
+        }
+      }
+
+      if (mode === 'replace') {
+        const tabsToClose: number[] = [];
+        for (const [url, tab] of openTabsMap.entries()) {
+          if (tab.id && !workspaceUrls.has(url)) {
+            tabsToClose.push(tab.id);
+          }
+        }
+        if (tabsToClose.length > 0) {
+          try {
+            await chrome.tabs.remove(tabsToClose);
+            closed = tabsToClose.length;
           } catch (e) {
-            console.warn(`Skipped invalid url: ${tab.url}`);
+            console.error('Failed to close tabs in replace mode', e);
           }
         }
       }
     }
     
-    return { opened, skipped };
+    return { opened, skipped, closed };
   },
 
   async exportWorkspaces(): Promise<{ version: number; exportedAt: number; workspaces: import('../types/workspace').Workspace[]; settings: import('../types/workspace').Settings }> {

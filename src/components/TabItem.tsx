@@ -11,6 +11,9 @@ interface TabItemProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (tabId: string) => void;
+  hideActions?: boolean;
+  workspaceContext?: string;
+  workspaceColor?: string;
 }
 
 export function TabItem({ 
@@ -19,7 +22,10 @@ export function TabItem({
   onRemove, 
   selectionMode = false, 
   isSelected = false, 
-  onToggleSelect 
+  onToggleSelect,
+  hideActions = false,
+  workspaceContext,
+  workspaceColor
 }: TabItemProps) {
   const [showMenu, setShowMenu] = useState(false);
 

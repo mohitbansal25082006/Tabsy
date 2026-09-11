@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Workspace, Tab } from '../types/workspace';
 import { tabService } from '../services/tabService';
 import { workspaceService } from '../services/workspaceService';
@@ -7,7 +7,7 @@ import { TabItem } from './TabItem';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { getIconComponent } from '../utils/iconMap';
-import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink } from 'lucide-react';
+import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -24,11 +24,14 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
   const [newName, setNewName] = useState(workspace.name);
   const [newIcon, setNewIcon] = useState(workspace.icon);
   const [newColor, setNewColor] = useState(workspace.color);
+  const [newCategory, setNewCategory] = useState(workspace.category || '');
   
   const [showMenu, setShowMenu] = useState(false);
+  const [showRestoreMenu, setShowRestoreMenu] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreFeedback, setRestoreFeedback] = useState<string | null>(null);
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentWindowId, setCurrentWindowId] = useState<number | null>(null);
@@ -49,6 +52,14 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
           setIsSyncing(syncedWsId === workspace.id);
         });
       }
+    });
+    // Fetch categories for autocomplete
+    workspaceService.getAllWorkspaces().then(workspaces => {
+      const cats = new Set<string>();
+      workspaces.forEach(w => {
+        if (w.category) cats.add(w.category);
+      });
+      setExistingCategories(Array.from(cats).sort());
     });
   }, [workspace.id]);
 
@@ -71,13 +82,15 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
 
   const handleEditSubmit = async () => {
     const trimmed = newName.trim();
-    if (trimmed && (trimmed !== workspace.name || newIcon !== workspace.icon || newColor !== workspace.color)) {
-      await workspaceService.updateWorkspaceMetadata(workspace.id, trimmed, newIcon, newColor);
-      onUpdate({ ...workspace, name: trimmed, icon: newIcon, color: newColor, updatedAt: Date.now() });
+    const trimmedCategory = newCategory.trim();
+    if (trimmed && (trimmed !== workspace.name || newIcon !== workspace.icon || newColor !== workspace.color || trimmedCategory !== (workspace.category || ''))) {
+      await workspaceService.updateWorkspaceMetadata(workspace.id, trimmed, newIcon, newColor, trimmedCategory);
+      onUpdate({ ...workspace, name: trimmed, icon: newIcon, color: newColor, category: trimmedCategory === '' ? undefined : trimmedCategory, updatedAt: Date.now() });
     } else {
       setNewName(workspace.name);
       setNewIcon(workspace.icon);
       setNewColor(workspace.color);
+      setNewCategory(workspace.category || '');
     }
     setIsEditing(false);
   };
@@ -90,6 +103,7 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
       setNewName(workspace.name);
       setNewIcon(workspace.icon);
       setNewColor(workspace.color);
+      setNewCategory(workspace.category || '');
       setIsEditing(false);
     }
   };
@@ -108,11 +122,13 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
     }
   };
 
-  const handleRestore = async () => {
-    setIsRestoring(true);
+  const handleRestore = async (mode: 'add' | 'replace' = 'add') => {
+        setIsRestoring(true);
     try {
-      const { skipped } = await workspaceService.restoreWorkspace(workspace.id);
-      if (skipped > 0) {
+      const { skipped, closed } = await workspaceService.restoreWorkspace(workspace.id, mode);
+      if (mode === 'replace' && closed && closed > 0) {
+        setRestoreFeedback(`Replaced (closed ${closed})`);
+      } else if (skipped > 0) {
         setRestoreFeedback(`Restored (skipped ${skipped})`);
       } else {
         setRestoreFeedback("Restored!");
@@ -126,7 +142,6 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
       setIsRestoring(false);
     }
   };
-
   const handleOpenTab = async (url: string, pinned?: boolean) => {
     try {
       await tabService.openMultipleTabs([{ url, pinned }]);
@@ -204,7 +219,7 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             {workspace.tabs.length} {workspace.tabs.length === 1 ? 'tab' : 'tabs'}
             {restoreFeedback && (
               <span className="text-green-600 dark:text-green-400 animate-in fade-in zoom-in slide-in-from-left-2 truncate">
-                • {restoreFeedback}
+                â€¢ {restoreFeedback}
               </span>
             )}
           </p>
@@ -223,13 +238,36 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             <Power size={16} />
           </button>
           
-          <button
-            onClick={handleRestore}
-            disabled={isRestoring || workspace.tabs.length === 0}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-200 dark:disabled:bg-gray-700/50 disabled:text-gray-400 dark:disabled:text-gray-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center justify-center min-w-[70px]"
-          >
-            {isRestoring ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Restore'}
-          </button>
+                    <div className="relative">
+            <button
+              onClick={() => setShowRestoreMenu(!showRestoreMenu)}
+              disabled={isRestoring || workspace.tabs.length === 0}
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-200 dark:disabled:bg-gray-700/50 disabled:text-gray-400 dark:disabled:text-gray-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center justify-center min-w-[70px]"
+            >
+              {isRestoring ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Restore'}
+            </button>
+            {showRestoreMenu && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowRestoreMenu(false)}></div>
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    onClick={() => { setShowRestoreMenu(false); handleRestore('add'); }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col"
+                  >
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Add to current window</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">Keeps existing tabs, skips duplicates</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowRestoreMenu(false); handleRestore('replace'); }}
+                    className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex flex-col border-t border-gray-100 dark:border-gray-700"
+                  >
+                    <span className="text-sm font-semibold text-red-600 dark:text-red-400">Replace current window</span>
+                    <span className="text-[10px] text-red-500/70 dark:text-red-400/70">Closes tabs not in this workspace</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="relative">
             <button 
@@ -312,6 +350,26 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             className="w-full font-bold text-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm mb-4"
             autoFocus
           />
+          <div className="mb-4">
+            <label htmlFor="edit-category" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Group / Category (Optional)
+            </label>
+            <input
+              id="edit-category"
+              type="text"
+              list="edit-categories"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full font-medium text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              placeholder="e.g. Work, Clients..."
+            />
+            <datalist id="edit-categories">
+              {existingCategories.map(cat => (
+                <option key={cat} value={cat} />
+              ))}
+            </datalist>
+          </div>
           <div className="space-y-4 mb-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Icon</label>
@@ -328,6 +386,7 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
                 setNewName(workspace.name);
                 setNewIcon(workspace.icon);
                 setNewColor(workspace.color);
+                setNewCategory(workspace.category || '');
                 setIsEditing(false);
               }}
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -388,41 +447,49 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
           )}
 
           {/* Tabs List */}
-          <div className="flex-1 overflow-y-auto p-2">
-            {workspace.tabs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 text-center px-4 animate-in fade-in duration-300">
-                <div className="text-4xl mb-4 text-gray-300 dark:text-gray-700 opacity-50">dY"</div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">This workspace is empty.</p>
-                <button
-                  onClick={handleUpdateTabs}
-                  disabled={isUpdating}
-                  className="text-blue-600 dark:text-blue-400 font-medium text-sm hover:underline disabled:opacity-50"
-                >
-                  Update with current tabs
-                </button>
-              </div>
-            ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={workspace.tabs} strategy={verticalListSortingStrategy}>
-                  <ul className="space-y-1 pb-4">
-                    {workspace.tabs.map((tab) => (
-                      <TabItem 
-                        key={tab.id} 
-                        tab={tab} 
-                        onOpen={handleOpenTab} 
-                        onRemove={handleRemoveTab} 
-                        selectionMode={selectionMode}
-                        isSelected={selectedTabs.has(tab.id)}
-                        onToggleSelect={toggleTabSelection}
-                      />
-                    ))}
-                  </ul>
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+                      <div className="flex-1 overflow-y-auto p-2 pb-20">
+              {workspace.tabs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center px-4 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="text-4xl mb-3 opacity-50">📭</div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Workspace is empty</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                    Add tabs or sync this workspace to get started.
+                  </p>
+                  <button
+                    onClick={handleUpdateTabs}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-md text-sm"
+                  >
+                    Update with current tabs
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={workspace.tabs} strategy={verticalListSortingStrategy}>
+                      <ul className="space-y-1 pb-2">
+                        {workspace.tabs.map((tab) => (
+                          <TabItem 
+                            key={tab.id} 
+                            tab={tab} 
+                            onOpen={handleOpenTab} 
+                            onRemove={handleRemoveTab} 
+                            selectionMode={selectionMode}
+                            isSelected={selectedTabs.has(tab.id)}
+                            onToggleSelect={toggleTabSelection}
+                          />
+                        ))}
+                      </ul>
+                    </SortableContext>
+                  </DndContext>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+
+
+
