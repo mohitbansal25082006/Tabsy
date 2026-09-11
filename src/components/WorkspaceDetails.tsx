@@ -5,6 +5,8 @@ import { workspaceService } from '../services/workspaceService';
 import { TabItem } from './TabItem';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
+import { getIconComponent } from '../utils/iconMap';
+import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2 } from 'lucide-react';
 
 interface WorkspaceDetailsProps {
   workspace: Workspace;
@@ -37,8 +39,9 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
     setIsEditing(false);
   };
 
-  const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleEditSubmit();
     } else if (e.key === 'Escape') {
       setNewName(workspace.name);
@@ -49,14 +52,14 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
   };
 
   const handleUpdateTabs = async () => {
+    setShowMenu(false);
     setIsUpdating(true);
     try {
-      const currentTabs = await tabService.getCurrentWindowTabs();
-      await workspaceService.updateWorkspaceTabs(workspace.id, currentTabs);
-      onUpdate({ ...workspace, tabs: currentTabs, updatedAt: Date.now() });
-      setShowMenu(false);
-    } catch (err) {
-      console.error(err);
+      const tabsToSave = await tabService.getCurrentWindowTabs();
+      await workspaceService.updateWorkspaceTabs(workspace.id, tabsToSave);
+      onUpdate({ ...workspace, tabs: tabsToSave, updatedAt: Date.now() });
+    } catch (error) {
+      console.error('Failed to update tabs:', error);
     } finally {
       setIsUpdating(false);
     }
@@ -64,59 +67,44 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
 
   const handleRestore = async () => {
     setIsRestoring(true);
-    setRestoreFeedback(null);
     try {
-      const result = await workspaceService.restoreWorkspace(workspace.id);
-      
-      let feedback = `Opened ${result.opened} tab${result.opened === 1 ? '' : 's'}.`;
-      if (result.skipped > 0) {
-        feedback += ` ${result.skipped} already open.`;
+      const { skipped } = await workspaceService.restoreWorkspace(workspace.id);
+      if (skipped > 0) {
+        setRestoreFeedback(`Restored (skipped ${skipped} duplicate${skipped === 1 ? '' : 's'})`);
+      } else {
+        setRestoreFeedback("Restored!");
       }
-      setRestoreFeedback(feedback);
-      
-      // Auto-hide feedback after 3 seconds
-      setTimeout(() => {
-        setRestoreFeedback(null);
-      }, 3000);
-      
-    } catch (err) {
-      console.error(err);
+      setTimeout(() => setRestoreFeedback(null), 3000);
+    } catch (error) {
+      console.error('Failed to restore workspace:', error);
+      setRestoreFeedback("Failed to restore");
+      setTimeout(() => setRestoreFeedback(null), 3000);
     } finally {
       setIsRestoring(false);
     }
   };
 
   const handleOpenTab = async (url: string) => {
-    if (!url) {
-      console.warn('Attempted to open empty or malformed URL');
-      return;
-    }
     try {
-      await tabService.openTab(url);
-    } catch (err) {
-      console.warn('Failed to open tab', url, err);
+      await tabService.openMultipleTabs([url]);
+    } catch (error) {
+      console.error('Failed to open tab:', error);
     }
   };
 
   const handleRemoveTab = async (tabId: string) => {
     try {
       await workspaceService.removeTabFromWorkspace(workspace.id, tabId);
-      
-      // Optimistically update the UI without needing a full refresh
       const updatedTabs = workspace.tabs.filter(t => t.id !== tabId);
-      onUpdate({ 
-        ...workspace, 
-        tabs: updatedTabs, 
-        updatedAt: Date.now() 
-      });
-    } catch (err) {
-      console.error('Failed to remove tab:', err);
+      onUpdate({ ...workspace, tabs: updatedTabs, updatedAt: Date.now() });
+    } catch (error) {
+      console.error('Failed to remove tab:', error);
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 relative transition-colors">
-      {/* Feedback Toast */}
+    <div className="flex flex-col h-full relative font-sans animate-in slide-in-from-right-4 duration-200">
+      
       {restoreFeedback && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-gray-800 text-white text-xs font-medium px-3 py-2 rounded-full shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
           {restoreFeedback}
@@ -130,28 +118,28 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
             onClick={onBack}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors -ml-2"
           >
-            &larr;
+            <ArrowLeft size={20} />
           </button>
           
           {!isEditing && (
             <div className="relative">
               <button 
                 onClick={() => setShowMenu(!showMenu)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors font-bold pb-1"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
               >
-                &#8942;
+                <MoreVertical size={20} />
               </button>
               
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)}></div>
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1">
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                     <button
                       onClick={handleUpdateTabs}
                       disabled={isUpdating}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 font-medium disabled:opacity-50 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium disabled:opacity-50 flex items-center gap-2 transition-colors"
                     >
-                      {isUpdating && <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>}
+                      {isUpdating ? <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span> : <RefreshCw size={16} />}
                       Update with open tabs
                     </button>
                     <button
@@ -159,8 +147,9 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
                         setShowMenu(false);
                         setIsEditing(true);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 font-medium"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium flex items-center gap-2 transition-colors"
                     >
+                      <Edit2 size={16} />
                       Edit Workspace
                     </button>
                     <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
@@ -169,8 +158,9 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
                         setShowMenu(false);
                         onDeleteRequest(workspace);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium"
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium flex items-center gap-2 transition-colors"
                     >
+                      <Trash2 size={16} />
                       Delete Workspace
                     </button>
                   </div>
@@ -181,13 +171,14 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
         </div>
 
         {isEditing ? (
-          <div className="animate-in fade-in slide-in-from-top-2 duration-200 pb-2">
+          <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-inner mb-2 animate-in fade-in slide-in-from-top-2 duration-200">
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={handleEditKeyDown}
-              className="w-full text-xl font-bold bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mb-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={handleKeyDown}
+              className="w-full font-bold text-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 transition-colors"
+              placeholder="Workspace name"
               autoFocus
             />
             
@@ -209,53 +200,45 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDeleteRequest 
                   setNewColor(workspace.color);
                   setIsEditing(false);
                 }}
-                className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleEditSubmit}
                 disabled={!newName.trim()}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 dark:disabled:bg-blue-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 dark:disabled:bg-blue-800 rounded-lg transition-colors shadow-sm"
               >
-                Save Changes
+                Save
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 group">
             <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+              className="flex items-center justify-center w-14 h-14 rounded-2xl text-2xl flex-shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-sm"
               style={{ backgroundColor: `${workspace.color}15`, color: workspace.color }}
               onClick={() => setIsEditing(true)}
               title="Click to edit workspace"
             >
-              {workspace.icon}
+              {getIconComponent(workspace.icon, 28)}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 
-                className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                onClick={() => setIsEditing(true)}
-                title="Click to edit workspace"
-              >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" onClick={() => setIsEditing(true)}>
                 {workspace.name}
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">
                 {workspace.tabs.length} {workspace.tabs.length === 1 ? 'tab' : 'tabs'}
               </p>
             </div>
-          </div>
-        )}
-        
-        {!isEditing && (
-          <div className="mt-4 flex gap-2">
+            
             <button
               onClick={handleRestore}
               disabled={isRestoring || workspace.tabs.length === 0}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-900 disabled:cursor-not-allowed text-white font-medium py-2 px-3 rounded-lg text-sm transition-colors shadow-sm flex justify-center items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-400 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm hover:shadow-md disabled:shadow-none hover:-translate-y-0.5 disabled:translate-y-0 flex items-center gap-2"
             >
               {isRestoring && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
-              {isRestoring ? 'Restoring...' : 'Restore Workspace'}
+              Restore
             </button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Search, X } from 'lucide-react';
 
 interface SearchBarProps {
   value: string;
@@ -17,13 +18,13 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
   }, [localValue, onChange]);
 
   return (
-    <div className="relative px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-10 sticky top-0 transition-colors">
-      <div className="relative flex items-center w-full h-10 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all border border-transparent dark:border-gray-700">
-        <div className="grid place-items-center h-full w-10 text-gray-400">
-          <span className="text-sm">🔍</span>
+    <div className="relative px-4 py-3 bg-gray-50 dark:bg-gray-900 z-10 sticky top-0 transition-colors">
+      <div className="relative flex items-center w-full h-11 rounded-xl bg-white dark:bg-gray-800 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all border border-gray-200 dark:border-gray-700 shadow-sm focus-within:shadow-md">
+        <div className="grid place-items-center h-full w-12 text-gray-400">
+          <Search size={18} />
         </div>
         <input
-          className="peer h-full w-full outline-none text-sm text-gray-700 dark:text-gray-200 pr-2 bg-transparent"
+          className="peer h-full w-full outline-none text-sm text-gray-700 dark:text-gray-200 pr-2 bg-transparent font-medium placeholder-gray-400 dark:placeholder-gray-500"
           type="text"
           id="search"
           placeholder="Search workspaces..."
@@ -36,7 +37,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
             className="grid place-items-center h-full w-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
             aria-label="Clear search"
           >
-            &times;
+            <X size={16} />
           </button>
         )}
       </div>

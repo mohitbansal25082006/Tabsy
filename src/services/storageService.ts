@@ -54,7 +54,7 @@ export const storageService = {
 
   async getSettings(): Promise<import('../types/workspace').Settings> {
     const defaultSettings: import('../types/workspace').Settings = {
-      theme: 'system',
+      theme: 'light',
       confirmBeforeDeleting: true,
       checkForDuplicateTabs: true
     };

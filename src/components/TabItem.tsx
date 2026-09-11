@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Tab } from '../types/workspace';
+import { MoreVertical, Trash2, ExternalLink } from 'lucide-react';
 
 interface TabItemProps {
   tab: Tab;
@@ -15,13 +16,13 @@ export function TabItem({ tab, onOpen, onRemove }: TabItemProps) {
   };
 
   return (
-    <li className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg group transition-colors relative">
+    <li className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl group transition-all relative border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
       <div 
         className="flex-1 flex items-center gap-3 min-w-0 cursor-pointer" 
         onClick={handleOpen}
         title={`Open ${tab.title}`}
       >
-        <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+        <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-md overflow-hidden shadow-sm">
           {tab.favicon ? (
             <img src={tab.favicon} alt="" className="w-4 h-4" />
           ) : (
@@ -29,11 +30,11 @@ export function TabItem({ tab, onOpen, onRemove }: TabItemProps) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {tab.title}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
-            {tab.url}
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate mt-0.5 font-medium">
+            {new URL(tab.url).hostname.replace('www.', '')}
           </p>
         </div>
       </div>
@@ -44,10 +45,10 @@ export function TabItem({ tab, onOpen, onRemove }: TabItemProps) {
             e.stopPropagation();
             setShowMenu(!showMenu);
           }}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors font-bold pb-1"
+          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           aria-label="Tab options"
         >
-          &#8942;
+          <MoreVertical size={16} />
         </button>
         
         {showMenu && (
@@ -59,16 +60,28 @@ export function TabItem({ tab, onOpen, onRemove }: TabItemProps) {
                 setShowMenu(false);
               }}
             ></div>
-            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1">
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-20 py-1 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                  handleOpen();
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+              >
+                <ExternalLink size={14} />
+                Open tab
+              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowMenu(false);
                   onRemove(tab.id);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium"
+                className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
               >
-                Remove from workspace
+                <Trash2 size={14} />
+                Remove
               </button>
             </div>
           </>

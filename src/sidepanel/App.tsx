@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import '../styles/globals.css';
 import { Workspace } from '../types/workspace';
 import { workspaceService } from '../services/workspaceService';
@@ -7,28 +7,30 @@ import { WorkspaceDetails } from '../components/WorkspaceDetails';
 import { CreateWorkspace } from '../components/CreateWorkspace';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SearchBar } from '../components/SearchBar';
+import { SettingsView } from '../components/Settings';
 import { filterWorkspaces } from '../utils/helpers';
 import { SettingsProvider, useSettings } from '../hooks/useSettings';
-import { SettingsView } from '../components/Settings';
+import { WorkspaceEditModal } from '../components/WorkspaceEditModal';
+import { Settings as SettingsIcon } from 'lucide-react';
 
 type ViewState = 'list' | 'details' | 'create' | 'settings';
 
 function AppContent() {
   const { settings } = useSettings();
-  const [view, setView] = useState<ViewState>('list');
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [view, setView] = useState<ViewState>('list');
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [seedTab, setSeedTab] = useState<any>(undefined);
   
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
+  const [workspaceToEdit, setWorkspaceToEdit] = useState<Workspace | null>(null);
 
   const loadWorkspaces = async () => {
     setIsLoading(true);
     try {
       const data = await workspaceService.getAllWorkspaces();
-      // Sort by updatedAt descending (newest first)
       data.sort((a, b) => b.updatedAt - a.updatedAt);
       setWorkspaces(data);
     } catch (error) {
@@ -40,12 +42,14 @@ function AppContent() {
 
   useEffect(() => {
     loadWorkspaces();
-  }, []);
 
-  useEffect(() => {
     const handleMessage = (message: any) => {
       if (message.type === 'TABSY_TRIGGER_CREATE_WORKSPACE') {
-        setSeedTab(message.seedTab);
+        if (message.seedTab) {
+          setSeedTab(message.seedTab);
+        } else {
+          setSeedTab(undefined);
+        }
         setView('create');
       }
     };
@@ -56,9 +60,10 @@ function AppContent() {
     };
   }, []);
 
-  const filteredWorkspaces = useMemo(() => {
-    return filterWorkspaces(workspaces, searchQuery);
-  }, [workspaces, searchQuery]);
+  const handleWorkspaceSelect = (id: string) => {
+    setActiveWorkspaceId(id);
+    setView('details');
+  };
 
   const handleCreateNew = () => {
     setSeedTab(undefined);
@@ -66,20 +71,13 @@ function AppContent() {
   };
 
   const handleWorkspaceCreated = (workspace: Workspace) => {
-    setWorkspaces([workspace, ...workspaces.filter(w => w.id !== workspace.id)]);
+    setWorkspaces([workspace, ...workspaces]);
     setActiveWorkspaceId(workspace.id);
     setView('details');
   };
 
-  const handleWorkspaceSelect = (id: string) => {
-    setActiveWorkspaceId(id);
-    setView('details');
-  };
-
   const handleWorkspaceUpdate = (updatedWorkspace: Workspace) => {
-    setWorkspaces(workspaces.map(w => 
-      w.id === updatedWorkspace.id ? updatedWorkspace : w
-    ).sort((a, b) => b.updatedAt - a.updatedAt));
+    setWorkspaces(workspaces.map(w => w.id === updatedWorkspace.id ? updatedWorkspace : w));
   };
 
   const handleWorkspaceDelete = async (id: string) => {
@@ -97,31 +95,40 @@ function AppContent() {
   };
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+  const filteredWorkspaces = React.useMemo(() => filterWorkspaces(workspaces, searchQuery), [workspaces, searchQuery]);
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden font-sans transition-colors">
-      {/* Global Header */}
-      {view === 'list' && (
-        <header className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900 z-10 transition-colors">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400">Tabsy</h1>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:inline">Your tabs. Your worlds. Zero chaos.</span>
-          </div>
+    <div className="w-full h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col overflow-hidden transition-colors font-sans">
+      
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-20 shadow-sm transition-colors">
+        <div 
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => {
+            setView('list');
+            setActiveWorkspaceId(null);
+          }}
+        >
+          <img src="/icons/icon32.png" alt="Tabsy Logo" className="w-8 h-8 shadow-sm rounded-lg" />
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Tabsy</h1>
+        </div>
+        
+        {view !== 'settings' && (
           <button
             onClick={() => setView('settings')}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
-            title="Settings"
+            className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all"
+            aria-label="Settings"
           >
-            &#9881;
+            <SettingsIcon size={20} />
           </button>
-        </header>
-      )}
+        )}
+      </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto">
-        {isLoading && workspaces.length === 0 ? (
+      <main className="flex-1 overflow-y-auto relative">
+        {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="w-8 h-8 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
           <>
@@ -133,22 +140,22 @@ function AppContent() {
                   searchQuery={searchQuery}
                   onWorkspaceSelect={handleWorkspaceSelect}
                   onCreateNew={handleCreateNew}
+                  onEditRequest={setWorkspaceToEdit}
+                  onDeleteRequest={(ws) => {
+                    if (settings.confirmBeforeDeleting) {
+                      setWorkspaceToDelete(ws);
+                    } else {
+                      handleWorkspaceDelete(ws.id);
+                    }
+                  }}
                 />
               </>
             )}
-            
-            {view === 'create' && (
-              <CreateWorkspace 
-                seedTab={seedTab}
-                onCancel={() => setView('list')}
-                onCreated={handleWorkspaceCreated}
-              />
-            )}
-            
+
             {view === 'details' && activeWorkspace && (
               <WorkspaceDetails 
-                workspace={activeWorkspace}
-                onBack={() => setView('list')}
+                workspace={activeWorkspace} 
+                onBack={() => setView('list')} 
                 onUpdate={handleWorkspaceUpdate}
                 onDeleteRequest={(ws) => {
                   if (settings.confirmBeforeDeleting) {
@@ -157,6 +164,14 @@ function AppContent() {
                     handleWorkspaceDelete(ws.id);
                   }
                 }}
+              />
+            )}
+
+            {view === 'create' && (
+              <CreateWorkspace 
+                seedTab={seedTab}
+                onCancel={() => setView('list')} 
+                onCreated={handleWorkspaceCreated} 
               />
             )}
 
@@ -170,16 +185,24 @@ function AppContent() {
         )}
       </main>
 
-      {/* Dialogs */}
+      {/* Modals */}
       {workspaceToDelete && (
         <ConfirmDialog
           title="Delete Workspace"
-          message={`Are you sure you want to delete "${workspaceToDelete.name}"? This will not close any currently open tabs, but the saved workspace will be gone forever.`}
+          message={`Are you sure you want to delete "${workspaceToDelete.name}"? This action cannot be undone.`}
           confirmText="Delete"
           cancelText="Cancel"
           onConfirm={() => handleWorkspaceDelete(workspaceToDelete.id)}
           onCancel={() => setWorkspaceToDelete(null)}
           isDestructive={true}
+        />
+      )}
+
+      {workspaceToEdit && (
+        <WorkspaceEditModal
+          workspace={workspaceToEdit}
+          onClose={() => setWorkspaceToEdit(null)}
+          onUpdate={handleWorkspaceUpdate}
         />
       )}
     </div>

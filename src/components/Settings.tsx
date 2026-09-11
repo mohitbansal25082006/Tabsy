@@ -3,6 +3,7 @@ import { useSettings } from '../hooks/useSettings';
 import { Theme } from '../types/workspace';
 import { workspaceService } from '../services/workspaceService';
 import { ConfirmDialog } from './ConfirmDialog';
+import { ArrowLeft, Download, Upload } from 'lucide-react';
 
 interface SettingsProps {
   onBack: () => void;
@@ -31,76 +32,75 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('Export successful');
-    } catch (error) {
-      console.error('Export failed:', error);
-      showToast('Export failed');
+    } catch (err) {
+      console.error('Export failed:', err);
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsImporting(true);
     setImportError(null);
-    try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      
-      // Preliminary check before showing dialog
-      if (json.version !== 1 || !Array.isArray(json.workspaces)) {
-        throw new Error("This file doesn't look like a valid Tabsy backup.");
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        setImportData(json); // Stage for confirmation
+      } catch (err) {
+        setImportError("Invalid JSON file. Please select a valid Tabsy backup.");
       }
-      
-      if (json.workspaces.length === 0) {
-        showToast("No workspaces found in that file.");
-        setIsImporting(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        return;
-      }
-
-      setImportData(json);
-    } catch (error: any) {
-      setImportError(error.message || "Invalid backup file");
-    } finally {
-      setIsImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.onerror = () => {
+      setImportError("Failed to read file.");
+    };
+    reader.readAsText(file);
+    
+    // Reset input so the same file can be selected again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
   const confirmImport = async () => {
     if (!importData) return;
+    
     setIsImporting(true);
     try {
-      const { imported } = await workspaceService.importWorkspaces(importData);
-      showToast(`Imported ${imported} workspace(s).`);
+      await workspaceService.importWorkspaces(importData);
+      setImportData(null);
+      setToastMessage("Import successful!");
+      setTimeout(() => setToastMessage(null), 3000);
       if (onImportSuccess) onImportSuccess();
-    } catch (error: any) {
-      setImportError(error.message || "Import failed");
+    } catch (err: any) {
+      setImportError(err.message || "Failed to import workspaces. The file might be corrupted or in an old format.");
+      setImportData(null);
     } finally {
       setIsImporting(false);
-      setImportData(null);
     }
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors">
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-10 flex items-center gap-3">
+    <div className="flex flex-col h-full relative animate-in slide-in-from-right-4 duration-200">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-gray-800 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+          {toastMessage}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-10 flex items-center gap-3 transition-colors">
         <button 
           onClick={onBack}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors -ml-2"
+          aria-label="Back"
         >
-          &larr;
+          <ArrowLeft size={20} />
         </button>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Settings</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">Settings</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-8">
@@ -111,7 +111,7 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
           </h3>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
             {(['system', 'light', 'dark'] as Theme[]).map((theme) => (
-              <label key={theme} className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+              <label key={theme} className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <input 
                   type="radio" 
                   name="theme" 
@@ -131,7 +131,7 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
             Workspace behavior
           </h3>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
-            <label className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+            <label className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <input 
                 type="checkbox"
                 checked={settings.confirmBeforeDeleting}
@@ -140,7 +140,7 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
               />
               <span className="ml-3 text-gray-700 dark:text-gray-200">Confirm before deleting</span>
             </label>
-            <label className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+            <label className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <input 
                 type="checkbox"
                 checked={settings.checkForDuplicateTabs}
@@ -156,30 +156,36 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Import / Export
           </h3>
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
             <button 
               onClick={handleExport}
               disabled={isExporting}
-              className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm disabled:opacity-50"
             >
-              <span>Export Workspaces</span>
-              <span>&darr;</span>
+              <Download size={18} />
+              {isExporting ? 'Exporting...' : 'Export Workspaces'}
             </button>
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isImporting}
-              className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between disabled:opacity-50"
-            >
-              <span>Import Workspaces</span>
-              <span>&uarr;</span>
-            </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              Downloads a tabsy-backup.json file
+            </p>
+            
+            <div className="h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+
             <input 
               type="file" 
               accept=".json" 
               ref={fileInputRef} 
               style={{ display: 'none' }} 
-              onChange={handleImportFile}
+              onChange={handleFileChange}
             />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm disabled:opacity-50"
+            >
+              <Upload size={18} />
+              {isImporting ? 'Reading...' : 'Import Workspaces'}
+            </button>
           </div>
         </section>
 
@@ -190,7 +196,7 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button 
               onClick={() => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })}
-              className="w-full text-left px-4 py-3 text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between"
+              className="w-full text-left px-4 py-3 text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
             >
               <span>Manage Chrome shortcuts</span>
               <span>&rarr;</span>
