@@ -1,0 +1,22 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="32" fill="#3B82F6"/>
+  
+  <!-- Browser Window Base -->
+  <rect x="20" y="44" width="88" height="56" rx="8" fill="white"/>
+  
+  <!-- Browser Top Bar -->
+  <path d="M20 52C20 47.5817 23.5817 44 28 44H100C104.418 44 108 47.5817 108 52V56H20V52Z" fill="#E2E8F0"/>
+  
+  <!-- Browser Window Content -->
+  <rect x="28" y="66" width="56" height="6" rx="3" fill="#CBD5E1"/>
+  <rect x="28" y="78" width="40" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="28" y="88" width="72" height="6" rx="3" fill="#E2E8F0"/>
+  
+  <!-- Active Tab -->
+  <path d="M28 32C28 27.5817 31.5817 24 36 24H60C64.4183 24 68 27.5817 68 32V44H28V32Z" fill="white"/>
+  <rect x="36" y="32" width="20" height="4" rx="2" fill="#3B82F6"/>
+  
+  <!-- Inactive Tab -->
+  <path d="M72 36C72 32.6863 74.6863 30 78 30H94C97.3137 30 100 32.6863 100 36V44H72V36Z" fill="white" fill-opacity="0.5"/>
+</svg>
