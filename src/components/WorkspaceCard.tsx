@@ -2,16 +2,17 @@ import React from 'react';
 import { Workspace } from '../types/workspace';
 import { formatRelativeTime } from '../utils/helpers';
 import { getIconComponent } from '../utils/iconMap';
-import { MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit2, Trash2, Copy } from 'lucide-react';
 
 interface WorkspaceCardProps {
   workspace: Workspace;
   onClick: (id: string) => void;
   onEdit: (workspace: Workspace) => void;
+  onDuplicate: (workspace: Workspace) => void;
   onDelete: (workspace: Workspace) => void;
 }
 
-export function WorkspaceCard({ workspace, onClick, onEdit, onDelete }: WorkspaceCardProps) {
+export function WorkspaceCard({ workspace, onClick, onEdit, onDuplicate, onDelete }: WorkspaceCardProps) {
   const [showMenu, setShowMenu] = React.useState(false);
 
   return (
@@ -68,6 +69,17 @@ export function WorkspaceCard({ workspace, onClick, onEdit, onDelete }: Workspac
               >
                 <Edit2 size={14} />
                 Edit
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                  onDuplicate(workspace);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <Copy size={14} />
+                Duplicate
               </button>
               <button
                 onClick={(e) => {

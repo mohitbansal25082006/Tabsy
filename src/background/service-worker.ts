@@ -1,3 +1,5 @@
+﻿import { syncService } from '../services/syncService';
+import { storageService } from '../services/storageService';
 import { workspaceService } from '../services/workspaceService';
 import { generateId } from '../utils/helpers';
 import { Tab } from '../types/workspace';
@@ -133,3 +135,85 @@ chrome.commands.onCommand.addListener(async (command) => {
     console.error('Error handling command:', error);
   }
 });
+
+let syncTimeouts: Record<number, any> = {};
+
+async function triggerSync(windowId: number) {
+  if (syncTimeouts[windowId]) {
+    clearTimeout(syncTimeouts[windowId]);
+  }
+  syncTimeouts[windowId] = setTimeout(async () => {
+    try {
+      const workspaceId = await syncService.getWorkspaceForWindow(windowId);
+      if (!workspaceId) {
+        // Clear badge if no longer syncing
+        chrome.action.setBadgeText({ text: '' });
+        return;
+      }
+      
+      const tabs = await chrome.tabs.query({ windowId });
+      const filteredTabs = tabs.filter(tab => {
+        const url = tab.url || '';
+        return !(url.startsWith('chrome://') || url.startsWith('chrome-extension://'));
+      });
+      
+      const newTabs = filteredTabs.map(tab => ({
+        id: generateId(),
+        title: tab.title || 'Untitled',
+        url: tab.url || '',
+        favicon: tab.favIconUrl,
+        pinned: tab.pinned || false,
+        position: tab.index
+      }));
+      
+      await workspaceService.updateWorkspaceTabs(workspaceId, newTabs);
+      
+      const ws = await storageService.getWorkspace(workspaceId);
+      
+      chrome.action.setBadgeText({ text: String(newTabs.length) });
+      if (ws) {
+        chrome.action.setBadgeBackgroundColor({ color: ws.color });
+      }
+    } catch (e) {
+      console.error('Sync failed:', e);
+    }
+  }, 500);
+}
+
+chrome.tabs.onCreated.addListener((tab) => {
+  if (tab.windowId) triggerSync(tab.windowId);
+});
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  if (removeInfo.windowId) triggerSync(removeInfo.windowId);
+});
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tab.windowId && (changeInfo.url || changeInfo.title || changeInfo.pinned !== undefined)) {
+    triggerSync(tab.windowId);
+  }
+});
+chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
+  if (moveInfo.windowId) triggerSync(moveInfo.windowId);
+});
+chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
+  triggerSync(attachInfo.newWindowId);
+});
+chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
+  triggerSync(detachInfo.oldWindowId);
+});
+
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  await syncService.stopSyncForWindow(windowId);
+});
+
+// Update badge when a workspace is synced manually
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes['tabsy_sync_map']) {
+    const newValue = changes['tabsy_sync_map'].newValue || {};
+    // Trigger sync for all mapped windows to update badge and state
+    for (const wid of Object.keys(newValue)) {
+      triggerSync(Number(wid));
+    }
+  }
+});
+
+

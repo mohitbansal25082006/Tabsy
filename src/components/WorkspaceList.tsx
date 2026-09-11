@@ -9,10 +9,19 @@ interface WorkspaceListProps {
   onWorkspaceSelect: (id: string) => void;
   onCreateNew: () => void;
   onEditRequest: (workspace: Workspace) => void;
+  onDuplicateRequest: (workspace: Workspace) => void;
   onDeleteRequest: (workspace: Workspace) => void;
 }
 
-export function WorkspaceList({ workspaces, searchQuery, onWorkspaceSelect, onCreateNew, onEditRequest, onDeleteRequest }: WorkspaceListProps) {
+export function WorkspaceList({ 
+  workspaces, 
+  searchQuery,
+  onWorkspaceSelect, 
+  onCreateNew,
+  onEditRequest,
+  onDuplicateRequest,
+  onDeleteRequest
+}: WorkspaceListProps) {
   if (workspaces.length === 0) {
     if (searchQuery.trim().length > 0) {
       return (
@@ -54,6 +63,7 @@ export function WorkspaceList({ workspaces, searchQuery, onWorkspaceSelect, onCr
             workspace={workspace} 
             onClick={() => onWorkspaceSelect(workspace.id)}
             onEdit={onEditRequest}
+            onDuplicate={onDuplicateRequest}
             onDelete={onDeleteRequest}
           />
         ))}

@@ -29,21 +29,21 @@ export const tabService = {
     }
   },
 
-  async openTab(url: string): Promise<void> {
+  async openTab(url: string, pinned: boolean = false): Promise<void> {
     try {
-      await chrome.tabs.create({ url });
+      await chrome.tabs.create({ url, pinned });
     } catch (error) {
       console.error(`Failed to open tab ${url}:`, error);
       throw error;
     }
   },
 
-  async openMultipleTabs(urls: string[]): Promise<void> {
-    for (const url of urls) {
+  async openMultipleTabs(tabsToOpen: { url: string; pinned?: boolean }[]): Promise<void> {
+    for (const tab of tabsToOpen) {
       try {
-        await chrome.tabs.create({ url });
+        await chrome.tabs.create({ url: tab.url, pinned: tab.pinned || false });
       } catch (error) {
-        console.warn(`Failed to open tab ${url}:`, error);
+        console.warn(`Failed to open tab ${tab.url}:`, error);
         // Continue with the rest of the batch
       }
     }
@@ -71,19 +71,19 @@ export const tabService = {
     }
   },
 
-  async getAllOpenUrlsInCurrentWindow(): Promise<Set<string>> {
+  async getOpenTabsMapInCurrentWindow(): Promise<Map<string, chrome.tabs.Tab>> {
     try {
       const tabs = await chrome.tabs.query({ currentWindow: true });
-      const urls = new Set<string>();
+      const urlMap = new Map<string, chrome.tabs.Tab>();
       for (const tab of tabs) {
         if (tab.url) {
-          urls.add(this.normalizeUrl(tab.url));
+          urlMap.set(this.normalizeUrl(tab.url), tab);
         }
       }
-      return urls;
+      return urlMap;
     } catch (error) {
       console.error('Failed to get open URLs:', error);
-      return new Set();
+      return new Map();
     }
   }
 };

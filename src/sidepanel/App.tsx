@@ -19,6 +19,7 @@ function AppContent() {
   const { settings } = useSettings();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [view, setView] = useState<ViewState>('list');
+  const [previousView, setPreviousView] = useState<ViewState | null>(null);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,9 +55,18 @@ function AppContent() {
       }
     };
 
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName === 'local' && changes['tabsy_workspaces']) {
+        loadWorkspaces();
+      }
+    };
+
     chrome.runtime.onMessage.addListener(handleMessage);
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    
     return () => {
       chrome.runtime.onMessage.removeListener(handleMessage);
+      chrome.storage.onChanged.removeListener(handleStorageChange);
     };
   }, []);
 
@@ -94,6 +104,17 @@ function AppContent() {
     }
   };
 
+  const handleWorkspaceDuplicate = async (workspace: Workspace) => {
+    try {
+      const newWorkspace = await workspaceService.duplicateWorkspace(workspace.id);
+      if (newWorkspace) {
+        setWorkspaces([newWorkspace, ...workspaces]);
+      }
+    } catch (error) {
+      console.error('Failed to duplicate workspace:', error);
+    }
+  };
+
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
   const filteredWorkspaces = React.useMemo(() => filterWorkspaces(workspaces, searchQuery), [workspaces, searchQuery]);
 
@@ -115,7 +136,10 @@ function AppContent() {
         
         {view !== 'settings' && (
           <button
-            onClick={() => setView('settings')}
+            onClick={() => {
+              setPreviousView(view);
+              setView('settings');
+            }}
             className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all"
             aria-label="Settings"
           >
@@ -141,6 +165,7 @@ function AppContent() {
                   onWorkspaceSelect={handleWorkspaceSelect}
                   onCreateNew={handleCreateNew}
                   onEditRequest={setWorkspaceToEdit}
+                  onDuplicateRequest={handleWorkspaceDuplicate}
                   onDeleteRequest={(ws) => {
                     if (settings.confirmBeforeDeleting) {
                       setWorkspaceToDelete(ws);
@@ -157,6 +182,7 @@ function AppContent() {
                 workspace={activeWorkspace} 
                 onBack={() => setView('list')} 
                 onUpdate={handleWorkspaceUpdate}
+                onDuplicateRequest={handleWorkspaceDuplicate}
                 onDeleteRequest={(ws) => {
                   if (settings.confirmBeforeDeleting) {
                     setWorkspaceToDelete(ws);
@@ -177,7 +203,10 @@ function AppContent() {
 
             {view === 'settings' && (
               <SettingsView 
-                onBack={() => setView('list')} 
+                onBack={() => {
+                  setView(previousView || 'list');
+                  setPreviousView(null);
+                }}
                 onImportSuccess={loadWorkspaces}
               />
             )}

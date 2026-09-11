@@ -50,6 +50,27 @@ export const workspaceService = {
     await storageService.deleteWorkspace(id);
   },
 
+  async duplicateWorkspace(id: string): Promise<Workspace | null> {
+    const workspace = await storageService.getWorkspace(id);
+    if (!workspace) return null;
+
+    const newWorkspace: Workspace = {
+      ...workspace,
+      id: generateId(),
+      name: `${workspace.name} (Copy)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    
+    newWorkspace.tabs = newWorkspace.tabs.map(tab => ({
+      ...tab,
+      id: generateId()
+    }));
+
+    await storageService.saveWorkspace(newWorkspace);
+    return newWorkspace;
+  },
+
   async removeTabFromWorkspace(workspaceId: string, tabId: string): Promise<void> {
     const workspace = await storageService.getWorkspace(workspaceId);
     if (workspace) {
@@ -80,25 +101,31 @@ export const workspaceService = {
     const settings = await storageService.getSettings();
     
     if (workspace && workspace.tabs && workspace.tabs.length > 0) {
-      const openUrls = settings.checkForDuplicateTabs 
-        ? await tabService.getAllOpenUrlsInCurrentWindow()
-        : new Set<string>();
+      const openTabsMap = settings.checkForDuplicateTabs 
+        ? await tabService.getOpenTabsMapInCurrentWindow()
+        : new Map<string, chrome.tabs.Tab>();
       
       for (const tab of workspace.tabs) {
         if (!tab.url) continue;
         
         const normalized = tabService.normalizeUrl(tab.url);
-        if (settings.checkForDuplicateTabs && openUrls.has(normalized)) {
+        if (settings.checkForDuplicateTabs && openTabsMap.has(normalized)) {
           skipped++;
+          // Update pinned state of existing tab if it differs
+          const existingTab = openTabsMap.get(normalized);
+          if (existingTab && existingTab.id && existingTab.pinned !== tab.pinned) {
+            await chrome.tabs.update(existingTab.id, { pinned: tab.pinned });
+          }
         } else {
           try {
-            await tabService.openTab(tab.url);
+            await tabService.openTab(tab.url, tab.pinned);
             opened++;
             if (settings.checkForDuplicateTabs) {
-              openUrls.add(normalized);
+              // Mark as opened to prevent duplicates within the same workspace
+              openTabsMap.set(normalized, {} as chrome.tabs.Tab);
             }
           } catch (e) {
-            console.error('Failed to open tab during restore:', tab.url, e);
+            console.warn(`Skipped invalid url: ${tab.url}`);
           }
         }
       }
