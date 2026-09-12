@@ -126,3 +126,23 @@ Version 1.3 introduces major productivity features, deeper Chrome integration, a
 * `src/background/service-worker.ts`
 * `src/styles/globals.css`
 * `public/manifest.json`
+
+## Version 1.4
+Version 1.4 bridges the gap between single-device isolation and true multi-device continuity, transforming Tabsy into a cloud-connected ecosystem while providing powerful personal analytics.
+
+### Features Implemented in V1.4
+* **Insights & Analytics Dashboard**: A sleek, chart-driven view (powered by Recharts) showing total tracked URLs, category distributions, and a visual graph of your most frequently restored workspaces.
+* **Cross-Device Cloud Sync**: Real-time cloud sync powered by Firebase Firestore. Sign in with Google securely using Chrome Identity, and watch your workspaces seamlessly sync in the background across all your desktop devices.
+* **Share Workspaces via Link**: Generate a short, secure 6-character code to share specific workspaces with colleagues or friends, completely bypassing manual JSON file exports.
+* **Seamless Import Flow**: Paste a Share ID in Settings to instantly pull down a shared workspace. The app handles this with beautiful, full-screen blurred overlays and animated transitions that drop you directly into your new workspace.
+* **Auth-Protected UI**: Cloud features are elegantly locked behind an un-obtrusive Sign-In gate within Settings, ensuring zero friction for users who prefer to remain strictly local.
+
+### Key Files Created & Updated
+* `src/components/Insights.tsx` (Created)
+* `src/services/cloudSyncService.ts` (Created)
+* `src/config/firebase.ts` (Created)
+* `src/sidepanel/App.tsx`
+* `src/components/Settings.tsx`
+* `src/components/WorkspaceDetails.tsx`
+* `src/background/service-worker.ts`
+* `public/manifest.json`

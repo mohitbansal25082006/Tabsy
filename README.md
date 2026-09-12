@@ -7,9 +7,12 @@
 
 ---
 
-## 🌟 Features
+## ✨ Features
 
 * **Side Panel Native**: Sits cleanly alongside your web browsing, instantly accessible with a click.
+* **Cross-Device Cloud Sync (V1.4)**: Optionally sign in with Google to sync your workspaces across all your devices in real-time.
+* **Share via Link (V1.4)**: Generate a secure 6-character code to instantly share workspaces with your friends or colleagues.
+* **Insights & Analytics (V1.4)**: View visual charts of your workspace usage, tab counts, and top categories.
 * **Native Chrome Tab Groups (V1.3)**: Fully supports and saves Chrome Tab Groups (including names and colors), ensuring complex layouts are restored perfectly.
 * **Duplicate Tab Management (V1.3)**: Scan across all workspaces to find and remove identical tabs using the built-in "Identical Tabs" manager.
 * **Keyboard-First Navigation (V1.3)**: Navigate lists, workspaces, and tabs quickly using arrow keys and Enter.
@@ -29,7 +32,7 @@
 
 ---
 
-## 📸 Interface
+## 🎨 Interface
 
 Tabsy is built using **React**, **Tailwind CSS**, and **Lucide Icons** to deliver a premium, buttery-smooth user experience complete with soft shadows, dynamic hover states, collapsible folders, smart search results, and beautiful floating modals.
 
@@ -70,27 +73,73 @@ Tabsy is built using **React**, **Tailwind CSS**, and **Lucide Icons** to delive
 
 ---
 
+## ☁️ Cloud Sync & Firebase Setup
+
+Tabsy functions perfectly offline via Chrome's local storage. However, if you wish to enable **Real-Time Cross-Device Sync** and **Link Sharing**, you must configure Firebase and Google Cloud.
+
+### 1. Firebase Setup
+1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
+2. Add a **Web App** to your project.
+3. Copy the provided configuration (`apiKey`, `authDomain`, `projectId`, etc.).
+4. In your local Tabsy repository, rename `.env.example` to `.env` and fill in your Firebase configuration variables.
+
+### 2. Firestore Database Rules
+Enable **Firestore Database** in Firebase and deploy the following security rules to protect user data and manage shared workspace links:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/workspaces/{workspaceId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /shared_workspaces/{shareId} {
+      allow read: if true; 
+      allow create: if request.auth != null; 
+      allow update, delete: if false; 
+    }
+  }
+}
+```
+
+### 3. Google Cloud Console (OAuth)
+To allow users to sign in with Google seamlessly using the Chrome Identity API, you need to whitelist your extension's ID.
+
+1. Find out your Tabsy Extension ID in `chrome://extensions/` (e.g., `cghnoiadbjpheclgeanjonkbdffeakei`).
+2. Go to the [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+3. Click **Create Credentials** -> **OAuth client ID**.
+4. Set Application Type to **Chrome app**.
+5. Paste your Extension ID in the Application ID field.
+6. Copy the generated `Client ID`.
+7. Open `public/manifest.json` and paste your Client ID under the `oauth2` > `client_id` field.
+
+Rebuild the project (`npm run build`), reload the extension, and Cloud Sync will be fully operational!
+
+---
+
 ## 🛠️ Tech Stack
 
 * **Chrome Extensions API (Manifest V3)**
-* **React 18**
+* **React 19**
 * **TypeScript**
 * **Vite** (with `@crxjs/vite-plugin` for HMR)
-* **Tailwind CSS**
+* **Tailwind CSS V4**
+* **Firebase (Auth & Firestore)**
 * **Lucide React** (Vector Iconography)
+* **Recharts** (Insights Analytics)
 * **dnd-kit** (Drag-and-Drop functionality)
 
 ---
 
 ## 🔒 Privacy First
 
-Tabsy runs entirely locally on your machine.
-* **No Servers**: Your data never leaves your browser.
-* **No Analytics**: We don't track your tabs, clicks, or workspaces.
-* **Local Storage**: All workspaces are saved directly to Chrome's local storage.
+Tabsy gives you full control over your data.
+* **Local By Default**: If you do not sign in, Tabsy runs entirely locally. Your tabs never leave your machine.
+* **Secure Cloud**: If you choose to enable Sync, your data is securely stored in your private Firebase Firestore instance behind strict, user-isolated security rules.
+* **No Analytics Tracking**: We do not inject third-party analytics or track your browsing activity.
 
 ---
 
 <div align="center">
-  <p>Built for version 1.3.0</p>
+  <p>Built for version 1.4.0</p>
 </div>

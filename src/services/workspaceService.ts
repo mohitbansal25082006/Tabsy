@@ -14,7 +14,8 @@ export const workspaceService = {
       note: note === '' ? undefined : note,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      tabs
+      tabs: tabs.map(t => ({ ...t, createdAt: t.createdAt || Date.now() })),
+      restoredCount: 0
     };
     await storageService.saveWorkspace(newWorkspace);
     return newWorkspace;
@@ -45,11 +46,16 @@ export const workspaceService = {
 
   async updateWorkspaceTabs(id: string, tabs: Tab[]): Promise<void> {
     const workspace = await storageService.getWorkspace(id);
-    if (workspace) {
-      workspace.tabs = tabs;
-      workspace.updatedAt = Date.now();
-      await storageService.saveWorkspace(workspace);
-    }
+    if (!workspace) throw new Error('Workspace not found');
+
+    workspace.tabs = tabs;
+    workspace.updatedAt = Date.now();
+    
+    await storageService.saveWorkspace(workspace);
+  },
+
+  async saveWorkspace(workspace: Workspace): Promise<void> {
+    await storageService.saveWorkspace(workspace);
   },
 
   async deleteWorkspace(id: string): Promise<void> {
@@ -73,12 +79,15 @@ export const workspaceService = {
       id: generateId(),
       name: `${workspace.name} (Copy)`,
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      restoredCount: 0,
+      lastRestoredAt: undefined
     };
     
     newWorkspace.tabs = newWorkspace.tabs.map(tab => ({
       ...tab,
-      id: generateId()
+      id: generateId(),
+      createdAt: Date.now()
     }));
 
     await storageService.saveWorkspace(newWorkspace);
@@ -100,7 +109,8 @@ export const workspaceService = {
       const normalizedNew = tabService.normalizeUrl(tab.url);
       const exists = workspace.tabs.some(t => tabService.normalizeUrl(t.url) === normalizedNew);
       if (!exists) {
-        workspace.tabs.push(tab);
+        const tabWithDate = { ...tab, createdAt: tab.createdAt || Date.now() };
+        workspace.tabs.push(tabWithDate);
         workspace.updatedAt = Date.now();
         await storageService.saveWorkspace(workspace);
       }
@@ -212,6 +222,11 @@ export const workspaceService = {
       }
     }
     
+    // Update analytics
+    workspace.restoredCount = (workspace.restoredCount || 0) + 1;
+    workspace.lastRestoredAt = Date.now();
+    await storageService.saveWorkspace(workspace);
+
     return { opened, skipped, closed };
   },
 

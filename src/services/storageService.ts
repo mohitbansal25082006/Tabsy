@@ -1,4 +1,4 @@
-﻿import { Workspace, DeletedWorkspace } from '../types/workspace';
+import { Workspace, DeletedWorkspace } from '../types/workspace';
 
 // Using a single storage key storing a Record<string, Workspace> for easy lookup by ID
 const STORAGE_KEY = 'tabsy_workspaces';
@@ -93,7 +93,8 @@ export const storageService = {
     const defaultSettings: import('../types/workspace').Settings = {
       theme: 'light',
       confirmBeforeDeleting: true,
-      checkForDuplicateTabs: true
+      checkForDuplicateTabs: true,
+      hasCompletedOnboarding: false
     };
     try {
       const data = await chrome.storage.local.get('tabsy_settings');

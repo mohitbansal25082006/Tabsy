@@ -3,16 +3,18 @@ import { useSettings } from '../hooks/useSettings';
 import { Theme, Workspace } from '../types/workspace';
 import { workspaceService } from '../services/workspaceService';
 import { ConfirmDialog } from './ConfirmDialog';
-import { ArrowLeft, Download, Upload, CheckSquare, Square, X, Layers } from 'lucide-react';
+import { ArrowLeft, Download, Upload, CheckSquare, Square, X, Layers, BarChart3, Loader2 } from 'lucide-react';
 import { DuplicateManager } from './DuplicateManager';
 import { getIconComponent } from '../utils/iconMap';
 
 interface SettingsProps {
   onBack: () => void;
-  onImportSuccess?: () => void; // Tell App to reload workspaces
+  onImportSuccess?: () => void;
+  onViewInsights?: () => void;
+  onImportShare?: (shareId: string) => void;
 }
 
-export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
+export function SettingsView({ onBack, onImportSuccess, onViewInsights, onImportShare }: SettingsProps) {
   const { settings, updateSettings } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeView, setActiveView] = useState<'main' | 'duplicates'>('main');
@@ -21,12 +23,28 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
   const [importData, setImportData] = useState<any>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [shareIdInput, setShareIdInput] = useState('');
+  const [isImportingLink, setIsImportingLink] = useState(false);
   
   const [showExportModal, setShowExportModal] = useState(false);
   const [allWorkspaces, setAllWorkspaces] = useState<Workspace[]>([]);
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    // Dynamically import to avoid breaking if Firebase isn't configured
+    import('../config/firebase').then(({ auth, hasFirebaseConfig }) => {
+      if (hasFirebaseConfig && auth) {
+        import('firebase/auth').then(({ onAuthStateChanged }) => {
+          const unsubscribe = onAuthStateChanged(auth, (currentUser: any) => {
+            setUser(currentUser);
+          });
+          return () => unsubscribe();
+        });
+      }
+    });
+
     workspaceService.getAllWorkspaces().then(ws => {
       setAllWorkspaces(ws);
       setSelectedExportIds(new Set(ws.map(w => w.id)));
@@ -137,6 +155,96 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
           </div>
         ) : (
           <>
+            <section className="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-50 fill-mode-both">
+              <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
+                Insights & Storage
+              </h3>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200/60 dark:border-gray-700/60 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={onViewInsights}
+                  className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50/80 dark:hover:bg-gray-700 transition-colors group"
+                >
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">View insights & storage</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage storage, saved tabs, and top workspaces</span>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-500 p-2 rounded-full group-hover:scale-110 transition-transform">
+                    <BarChart3 size={16} />
+                  </div>
+                </button>
+              </div>
+            </section>
+
+            <section className="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-50 fill-mode-both">
+              <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
+                Cloud Sync & Sharing
+              </h3>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200/60 dark:border-gray-700/60 p-4 transition-shadow hover:shadow-md">
+                {user ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      {user.photoURL ? (
+                        <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full shadow-sm border-2 border-white dark:border-gray-700" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg">
+                          {user.email?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{user.displayName || 'Tabsy User'}</span>
+                        <span className="text-xs text-green-600 dark:text-green-400 mt-0.5 truncate flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Sync Active
+                        </span>
+                        <span className="text-[10px] text-gray-400 break-all leading-tight mt-0.5">{user.email}</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        const { cloudSyncService } = await import('../services/cloudSyncService');
+                        await cloudSyncService.signOut();
+                      }}
+                      className="px-3 py-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Sync with Firebase</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Real-time cross-device sync</span>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        if (isSigningIn) return;
+                        setIsSigningIn(true);
+                        try {
+                          const { cloudSyncService } = await import('../services/cloudSyncService');
+                          await cloudSyncService.signInWithGoogle();
+                        } catch (e: any) {
+                          alert(e.message || "Failed to sign in. See console.");
+                        } finally {
+                          setIsSigningIn(false);
+                        }
+                      }}
+                      disabled={isSigningIn}
+                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 disabled:opacity-50 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      {isSigningIn ? (
+                        <>
+                          <span className="w-3 h-3 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+                          Signing In...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
             <section className="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75 fill-mode-both">
               <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
                 Appearance
@@ -230,6 +338,30 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
                   <Upload size={18} className="group-hover:-translate-y-0.5 transition-transform" />
                   {isImporting ? 'Reading...' : 'Import Workspaces'}
                 </button>
+
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent my-3"></div>
+                
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    placeholder="Enter Share ID..."
+                    value={shareIdInput}
+                    onChange={(e) => setShareIdInput(e.target.value)}
+                    className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500 transition-colors uppercase"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!shareIdInput.trim()) return;
+                      if (onImportShare) {
+                        onImportShare(shareIdInput.trim());
+                      }
+                    }}
+                    disabled={!shareIdInput.trim()}
+                    className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-4 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50"
+                  >
+                    Import Link
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -372,6 +504,18 @@ export function SettingsView({ onBack, onImportSuccess }: SettingsProps) {
           </div>
         </>
       )}
+
+      {/* Loading Overlay for Sign In */}
+      {isSigningIn && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300">
+          <div className="flex flex-col items-center gap-4 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+            <Loader2 size={40} className="text-blue-500 animate-spin" />
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Signing in...</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Authenticating with Google</p>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -9,9 +9,10 @@ interface SettingsContextType {
 }
 
 const defaultSettings: Settings = {
-  theme: 'system',
+  theme: 'light',
   confirmBeforeDeleting: true,
-  checkForDuplicateTabs: true
+  checkForDuplicateTabs: true,
+  hasCompletedOnboarding: false
 };
 
 const SettingsContext = createContext<SettingsContextType>({

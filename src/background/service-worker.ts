@@ -7,44 +7,66 @@ import { Tab } from '../types/workspace';
 const CONTEXT_MENU_PARENT_ID = 'save-to-tabsy';
 const CONTEXT_MENU_NEW_WORKSPACE_ID = 'tabsy-new-workspace';
 
+let isRebuildingMenu = false;
+let queuedMenuRebuild = false;
+
 async function rebuildContextMenu() {
-  await chrome.contextMenus.removeAll();
-  
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_PARENT_ID,
-    title: 'Save page to Tabsy',
-    contexts: ['page']
-  });
+  if (isRebuildingMenu) {
+    queuedMenuRebuild = true;
+    return;
+  }
+  isRebuildingMenu = true;
 
-  const workspaces = await workspaceService.getAllWorkspaces();
-  workspaces.sort((a, b) => b.updatedAt - a.updatedAt);
+  try {
+    await chrome.contextMenus.removeAll();
+    
+    // We create a promise-based wrapper to ensure creation finishes
+    await new Promise<void>((resolve) => {
+      chrome.contextMenus.create({
+        id: CONTEXT_MENU_PARENT_ID,
+        title: 'Save page to Tabsy',
+        contexts: ['page']
+      }, () => resolve());
+    });
 
-  for (const ws of workspaces) {
+    const workspaces = await workspaceService.getAllWorkspaces();
+    workspaces.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    for (const ws of workspaces) {
+      chrome.contextMenus.create({
+        id: `workspace-${ws.id}`,
+        parentId: CONTEXT_MENU_PARENT_ID,
+        title: `${ws.icon} ${ws.name}`,
+        contexts: ['page']
+      });
+    }
+
+    // Separator
+    if (workspaces.length > 0) {
+      chrome.contextMenus.create({
+        id: 'separator',
+        parentId: CONTEXT_MENU_PARENT_ID,
+        type: 'separator',
+        contexts: ['page']
+      });
+    }
+
+    // New Workspace option
     chrome.contextMenus.create({
-      id: `workspace-${ws.id}`,
+      id: CONTEXT_MENU_NEW_WORKSPACE_ID,
       parentId: CONTEXT_MENU_PARENT_ID,
-      title: `${ws.icon} ${ws.name}`,
+      title: '+ New Workspace',
       contexts: ['page']
     });
+  } catch (error) {
+    console.error("Error rebuilding context menu:", error);
+  } finally {
+    isRebuildingMenu = false;
+    if (queuedMenuRebuild) {
+      queuedMenuRebuild = false;
+      rebuildContextMenu();
+    }
   }
-
-  // Separator
-  if (workspaces.length > 0) {
-    chrome.contextMenus.create({
-      id: 'separator',
-      parentId: CONTEXT_MENU_PARENT_ID,
-      type: 'separator',
-      contexts: ['page']
-    });
-  }
-
-  // New Workspace option
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_NEW_WORKSPACE_ID,
-    parentId: CONTEXT_MENU_PARENT_ID,
-    title: '+ New Workspace',
-    contexts: ['page']
-  });
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -154,6 +176,15 @@ async function triggerSync(windowId: number) {
         chrome.action.setBadgeText({ text: '' });
         return;
       }
+
+      // Check if window still exists (it might have been closed)
+      try {
+        await chrome.windows.get(windowId);
+      } catch (err) {
+        // Window doesn't exist anymore, stop syncing for this window
+        await syncService.stopSyncForWindow(windowId);
+        return;
+      }
       
       const groups = new Map<number, chrome.tabGroups.TabGroup>();
       if (chrome.tabGroups) {
@@ -192,8 +223,10 @@ async function triggerSync(windowId: number) {
       if (ws) {
         chrome.action.setBadgeBackgroundColor({ color: ws.color });
       }
-    } catch (e) {
-      console.error('Sync failed:', e);
+    } catch (e: any) {
+      if (!e?.message?.toLowerCase().includes('no window') && !e?.message?.includes('No SW')) {
+        console.error('Sync failed:', e);
+      }
     }
   }, 500);
 }

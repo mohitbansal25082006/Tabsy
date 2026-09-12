@@ -12,6 +12,7 @@ export interface Tab {
   position: number;
   note?: string;
   group?: TabGroupInfo;
+  createdAt?: number; // V1.4 Analytics
 }
 
 export interface Workspace {
@@ -24,6 +25,8 @@ export interface Workspace {
   tabs: Tab[];
   createdAt: number;
   updatedAt: number;
+  restoredCount?: number; // V1.4 Analytics
+  lastRestoredAt?: number; // V1.4 Analytics
 }
 
 export interface DeletedWorkspace extends Workspace {
@@ -36,4 +39,5 @@ export interface Settings {
   theme: Theme;
   confirmBeforeDeleting: boolean;
   checkForDuplicateTabs: boolean;
+  hasCompletedOnboarding?: boolean;
 }

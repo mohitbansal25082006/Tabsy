@@ -7,7 +7,7 @@ import { TabItem } from './TabItem';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { getIconComponent } from '../utils/iconMap';
-import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus, Download } from 'lucide-react';
+import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus, Download, Loader2, CheckCircle } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -28,6 +28,8 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
   const [newNote, setNewNote] = useState(workspace.note || '');
   
   const [showMenu, setShowMenu] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccessId, setShareSuccessId] = useState<string | null>(null);
   const [showRestoreMenu, setShowRestoreMenu] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -343,6 +345,29 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
                   <button
                     onClick={async () => {
                       setShowMenu(false);
+                      setIsSharing(true);
+                      try {
+                        const { cloudSyncService } = await import('../services/cloudSyncService');
+                        const shareId = await cloudSyncService.generateShareLink(workspace);
+                        navigator.clipboard.writeText(shareId);
+                        setTimeout(() => {
+                          setIsSharing(false);
+                          setShareSuccessId(shareId);
+                          setTimeout(() => setShareSuccessId(null), 3500);
+                        }, 800);
+                      } catch (e: any) {
+                        setIsSharing(false);
+                        alert(e.message || "Failed to share workspace.");
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 font-medium flex items-center gap-2 transition-colors border-t border-gray-100 dark:border-gray-700 mt-1 pt-2"
+                  >
+                    <ExternalLink size={14} />
+                    Share Workspace Link
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setShowMenu(false);
                       const data = await workspaceService.exportWorkspaces([workspace.id]);
                       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                       const url = URL.createObjectURL(blob);
@@ -542,6 +567,31 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             </div>
           </>
         )}
+
+      {/* Loading Overlay */}
+      {isSharing && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300">
+          <div className="flex flex-col items-center gap-4 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+            <Loader2 size={40} className="text-blue-500 animate-spin" />
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Generating Secure Link</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Preparing workspace for sharing...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Success Overlay */}
+      {shareSuccessId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity duration-300">
+          <div className="flex flex-col items-center text-center max-w-sm w-full gap-4 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-500 dark:text-green-400 rounded-full flex items-center justify-center mb-2">
+              <CheckCircle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Link Copied!</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">The workspace share link has been copied to your clipboard.</p>
+          </div>
+        </div>
+      )}
+
       </div>
     );
   }
