@@ -88,7 +88,11 @@
 
 Tabsy is built with **React**, **Tailwind CSS**, and **Lucide Icons** to feel premium and buttery-smooth: soft shadows, dynamic hover states, collapsible folders, live search results, and floating modals — all hyper-optimized for the narrow Side Panel format.
 
-> 💡 *Add a screenshot or GIF of the Side Panel here — a visual is worth a thousand bullet points.*
+<p align="center">
+  <img src="public/screenshots/home.png" width="280" alt="Tabsy — Home screen" />
+  <img src="public/screenshots/workspace.png" width="280" alt="Tabsy — Inside a workspace" />
+  <img src="public/screenshots/settings.png" width="280" alt="Tabsy — Settings screen" />
+</p>
 
 ---
 
