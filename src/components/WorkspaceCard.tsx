@@ -17,8 +17,12 @@ export function WorkspaceCard({ workspace, onClick, onEdit, onDuplicate, onDelet
 
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 p-4 cursor-pointer transition-all group flex items-start gap-4 overflow-visible relative"
+      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 p-4 cursor-pointer transition-all group flex items-start gap-4 overflow-visible relative focus:outline-none focus:ring-2 focus:ring-blue-500"
       onClick={() => onClick(workspace.id)}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onClick(workspace.id);
+      }}
     >
       <div 
         className="absolute left-0 top-0 bottom-0 w-2 rounded-l-2xl"
@@ -41,6 +45,11 @@ export function WorkspaceCard({ workspace, onClick, onEdit, onDuplicate, onDelet
           <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
           <span>{formatRelativeTime(workspace.updatedAt)}</span>
         </p>
+        {workspace.note && (
+          <p className="text-xs mt-2 px-2 py-1 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800/50 truncate w-fit max-w-full">
+            {workspace.note}
+          </p>
+        )}
       </div>
 
       {/* Quick Actions (Hover + Menu) */}

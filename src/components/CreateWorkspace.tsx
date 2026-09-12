@@ -5,7 +5,7 @@ import { Workspace, Tab } from '../types/workspace';
 import { IconPicker } from './IconPicker';
 import { ColorPicker, COLORS } from './ColorPicker';
 import { ICON_NAMES } from '../utils/iconMap';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
 
 interface CreateWorkspaceProps {
   seedTab?: Tab;
@@ -16,7 +16,9 @@ interface CreateWorkspaceProps {
 export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspaceProps) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
+  const [note, setNote] = useState('');
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [icon, setIcon] = useState<string>(ICON_NAMES[0]);
   const [color, setColor] = useState(COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,7 +42,7 @@ export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspac
     setIsSaving(true);
     try {
       const tabsToSave = seedTab ? [seedTab] : await tabService.getCurrentWindowTabs();
-      const newWorkspace = await workspaceService.createWorkspace(trimmedName, icon, color, tabsToSave, category.trim());
+      const newWorkspace = await workspaceService.createWorkspace(trimmedName, icon, color, tabsToSave, category.trim(), note.trim());
       onCreated(newWorkspace);
     } catch (error) {
       console.error('Failed to create workspace:', error);
@@ -80,24 +82,67 @@ export function CreateWorkspace({ seedTab, onCancel, onCreated }: CreateWorkspac
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 relative">
           <label htmlFor="category" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
             Group / Category (Optional)
           </label>
-          <input
-            id="category"
-            type="text"
-            list="categories"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full font-medium text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-sm"
-            placeholder="e.g. Work, Clients..."
+          <div className="relative">
+            <input
+              id="category"
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              onFocus={() => setShowCategoryDropdown(true)}
+              onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
+              className="w-full font-medium text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-4 pr-10 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-sm"
+              placeholder="e.g. Work, Clients..."
+            />
+            {existingCategories.length > 0 && (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Prevents input onBlur
+                  setShowCategoryDropdown(!showCategoryDropdown);
+                }}
+                className="absolute inset-y-0 right-0 w-10 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+              >
+                <ChevronDown size={16} />
+              </button>
+            )}
+            
+            {showCategoryDropdown && existingCategories.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto custom-scrollbar py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                {existingCategories.map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevents input onBlur
+                      setCategory(cat);
+                      setShowCategoryDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label htmlFor="note" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            Note (Optional)
+          </label>
+          <textarea
+            id="note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            className="w-full font-medium text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-sm resize-none"
+            placeholder="Add a workspace description or note..."
           />
-          <datalist id="categories">
-            {existingCategories.map(cat => (
-              <option key={cat} value={cat} />
-            ))}
-          </datalist>
         </div>
 
         <div className="mb-6">

@@ -101,3 +101,28 @@ Version 1.2 focuses on advanced organization, safety mechanisms, and deeper sear
 * `src/services/workspaceService.ts`
 * `src/sidepanel/App.tsx`
 * `src/types/workspace.ts`
+
+## Version 1.3
+Version 1.3 introduces major productivity features, deeper Chrome integration, and highly-requested management capabilities.
+
+### Features Implemented in V1.3
+* **Native Chrome Tab Groups Integration**: Tabsy now captures, saves, and fully restores native Chrome Tab Groups (including their names and colors), ensuring your complex workspace layouts are preserved exactly as you left them.
+* **Cross-Workspace Duplicate Detection**: Added a powerful "Identical Tabs" manager within Settings to find and safely merge/remove duplicate URLs spread across different workspaces, keeping your setup clean.
+* **Keyboard-First Navigation**: Global keyboard shortcuts and robust arrow-key navigation logic let power users traverse workspaces and tabs entirely without a mouse.
+* **Workspace & Tab Annotations**: Attach custom text notes directly to entire workspaces or individual tabs for better context and documentation.
+* **Selective Workspace Export**: Sharing is now easier with a refined export flow that lets you handpick specific workspaces to export as a file, rather than forcing a full backup.
+* **UI & UX Polish**: Sleek, custom-styled scrollbars, dark mode visual fixes, redesigned compact headers, and smart dropdown comboboxes for group selections.
+
+### Key Files Created & Updated
+* `src/components/DuplicateManager.tsx` (Created)
+* `src/components/Settings.tsx`
+* `src/components/TabItem.tsx`
+* `src/components/WorkspaceDetails.tsx`
+* `src/components/WorkspaceEditModal.tsx`
+* `src/components/CreateWorkspace.tsx`
+* `src/components/WorkspaceList.tsx`
+* `src/services/workspaceService.ts`
+* `src/services/tabService.ts`
+* `src/background/service-worker.ts`
+* `src/styles/globals.css`
+* `public/manifest.json`

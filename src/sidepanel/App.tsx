@@ -47,9 +47,19 @@ function AppContent() {
   useEffect(() => {
     loadWorkspaces();
 
+    const checkPendingTriggers = async () => {
+      const data = await chrome.storage.local.get(['_tabsy_trigger_create', '_tabsy_seed_tab']);
+      if (data._tabsy_trigger_create) {
+        setSeedTab(data._tabsy_seed_tab);
+        setView('create');
+        await chrome.storage.local.remove(['_tabsy_trigger_create', '_tabsy_seed_tab']);
+      }
+    };
+    checkPendingTriggers();
+
     const handleMessage = (message: any) => {
       if (message.type === 'TABSY_TRIGGER_CREATE_WORKSPACE') {
-        if (message.seedTab) {
+        if (message.seedTab !== undefined) {
           setSeedTab(message.seedTab);
         } else {
           setSeedTab(undefined);
@@ -67,9 +77,33 @@ function AppContent() {
     chrome.runtime.onMessage.addListener(handleMessage);
     chrome.storage.onChanged.addListener(handleStorageChange);
     
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const focusable = Array.from(document.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )).filter(el => !el.hasAttribute('disabled') && el.offsetWidth > 0 && el.offsetHeight > 0);
+        
+        if (focusable.length === 0) return;
+        
+        const index = focusable.indexOf(document.activeElement as HTMLElement);
+        let nextIndex = 0;
+        if (e.key === 'ArrowDown') {
+          nextIndex = index === -1 ? 0 : (index + 1) % focusable.length;
+        } else {
+          nextIndex = index === -1 ? focusable.length - 1 : (index - 1 + focusable.length) % focusable.length;
+        }
+        
+        e.preventDefault();
+        focusable[nextIndex].focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    
     return () => {
       chrome.runtime.onMessage.removeListener(handleMessage);
       chrome.storage.onChanged.removeListener(handleStorageChange);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 

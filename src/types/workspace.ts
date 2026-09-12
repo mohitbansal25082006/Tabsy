@@ -1,3 +1,8 @@
+export interface TabGroupInfo {
+  title?: string;
+  color: string;
+}
+
 export interface Tab {
   id: string;
   title: string;
@@ -5,6 +10,8 @@ export interface Tab {
   favicon?: string;
   pinned: boolean;
   position: number;
+  note?: string;
+  group?: TabGroupInfo;
 }
 
 export interface Workspace {
@@ -13,6 +20,7 @@ export interface Workspace {
   icon: string;
   color: string;
   category?: string;
+  note?: string;
   tabs: Tab[];
   createdAt: number;
   updatedAt: number;

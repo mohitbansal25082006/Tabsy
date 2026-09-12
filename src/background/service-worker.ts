@@ -1,4 +1,4 @@
-﻿import { syncService } from '../services/syncService';
+import { syncService } from '../services/syncService';
 import { storageService } from '../services/storageService';
 import { workspaceService } from '../services/workspaceService';
 import { generateId } from '../utils/helpers';
@@ -123,13 +123,17 @@ chrome.commands.onCommand.addListener(async (command) => {
     } else if (command === 'save-workspace') {
       await chrome.sidePanel.open({ windowId });
       
+      const seedTab = undefined; // You can fetch current tab here if needed
+      await chrome.storage.local.set({ _tabsy_trigger_create: true, _tabsy_seed_tab: seedTab });
+      
       setTimeout(() => {
         chrome.runtime.sendMessage({ 
-          type: 'TABSY_TRIGGER_CREATE_WORKSPACE' 
+          type: 'TABSY_TRIGGER_CREATE_WORKSPACE',
+          seedTab
         }).catch(() => {
-          console.warn('Side panel not ready to receive message.');
+          // Ignored if sidepanel isn't ready
         });
-      }, 300);
+      }, 500);
     }
   } catch (error) {
     console.error('Error handling command:', error);
@@ -151,20 +155,34 @@ async function triggerSync(windowId: number) {
         return;
       }
       
+      const groups = new Map<number, chrome.tabGroups.TabGroup>();
+      if (chrome.tabGroups) {
+        const tabGroups = await chrome.tabGroups.query({ windowId });
+        for (const g of tabGroups) groups.set(g.id, g);
+      }
+
       const tabs = await chrome.tabs.query({ windowId });
       const filteredTabs = tabs.filter(tab => {
         const url = tab.url || '';
         return !(url.startsWith('chrome://') || url.startsWith('chrome-extension://'));
       });
       
-      const newTabs = filteredTabs.map(tab => ({
-        id: generateId(),
-        title: tab.title || 'Untitled',
-        url: tab.url || '',
-        favicon: tab.favIconUrl,
-        pinned: tab.pinned || false,
-        position: tab.index
-      }));
+      const newTabs = filteredTabs.map(tab => {
+        let groupInfo = undefined;
+        if (tab.groupId && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+          const g = groups.get(tab.groupId);
+          if (g) groupInfo = { title: g.title, color: g.color as string };
+        }
+        return {
+          id: generateId(),
+          title: tab.title || 'Untitled',
+          url: tab.url || '',
+          favicon: tab.favIconUrl,
+          pinned: tab.pinned || false,
+          position: tab.index,
+          group: groupInfo
+        };
+      });
       
       await workspaceService.updateWorkspaceTabs(workspaceId, newTabs);
       
@@ -200,6 +218,18 @@ chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
 chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
   triggerSync(detachInfo.oldWindowId);
 });
+
+if (chrome.tabGroups) {
+  chrome.tabGroups.onUpdated.addListener((group) => {
+    if (group.windowId) triggerSync(group.windowId);
+  });
+  chrome.tabGroups.onCreated.addListener((group) => {
+    if (group.windowId) triggerSync(group.windowId);
+  });
+  chrome.tabGroups.onRemoved.addListener((group) => {
+    if (group.windowId) triggerSync(group.windowId);
+  });
+}
 
 chrome.windows.onRemoved.addListener(async (windowId) => {
   await syncService.stopSyncForWindow(windowId);

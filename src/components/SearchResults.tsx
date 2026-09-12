@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Workspace, Tab } from '../types/workspace';
 import { WorkspaceCard } from './WorkspaceCard';
 import { ExternalLink } from 'lucide-react';
@@ -83,7 +83,7 @@ export function SearchResults({
                 <img 
                   src={tab.favicon || ''} 
                   alt="" 
-                  className="w-5 h-5 flex-shrink-0 bg-white rounded-sm object-contain"
+                  className="w-5 h-5 flex-shrink-0 rounded-sm object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik0xMiAyYTE0LjUgMTQuNSAwIDAgMCAwIDIwIDE0LjUgMTQuNSAwIDAgMCAwLTIwIi8+PHBhdGggZD0iTTIgMTJoMjAiLz48L3N2Zz4=';
                   }}

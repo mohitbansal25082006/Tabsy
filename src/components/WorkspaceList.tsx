@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Workspace } from '../types/workspace';
 import { WorkspaceCard } from './WorkspaceCard';
 import { Plus, ChevronDown, ChevronRight, Folder } from 'lucide-react';
@@ -93,7 +93,7 @@ export function WorkspaceList({
               {!isUncategorized && (
                 <button
                   onClick={() => toggleCategory(category)}
-                  className="flex items-center gap-2 w-full text-left py-1.5 px-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors group"
+                  className="flex items-center gap-2 w-full text-left py-1.5 px-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors group"
                 >
                   <div className="text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300 transition-colors">
                     {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}

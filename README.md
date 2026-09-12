@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="public/icons/icon128.png" alt="Tabsy Logo" width="128" />
   <h1>Tabsy</h1>
   <p><strong>Your tabs. Your worlds. Zero chaos.</strong></p>
@@ -10,6 +10,10 @@
 ## 🌟 Features
 
 * **Side Panel Native**: Sits cleanly alongside your web browsing, instantly accessible with a click.
+* **Native Chrome Tab Groups (V1.3)**: Fully supports and saves Chrome Tab Groups (including names and colors), ensuring complex layouts are restored perfectly.
+* **Duplicate Tab Management (V1.3)**: Scan across all workspaces to find and remove identical tabs using the built-in "Identical Tabs" manager.
+* **Keyboard-First Navigation (V1.3)**: Navigate lists, workspaces, and tabs quickly using arrow keys and Enter.
+* **Workspace Annotations (V1.3)**: Attach custom text notes to any workspace or tab to document your research.
 * **Smart Workspaces**: Save your current open tabs into isolated workspaces (e.g., "Research", "Travel", "Work").
 * **Workspace Groups & Folders (V1.2)**: Categorize your workspaces into collapsible folders for ultimate organization.
 * **Global Deep Search (V1.2)**: Instantly search across all your workspaces to find specific tab titles and URLs.
@@ -20,7 +24,7 @@
 * **Advanced Pinned Tab Support (V1.1)**: Pinned tab states are fully tracked, visibly badged, and flawlessly preserved upon restoring a workspace.
 * **Bulk Actions**: Multi-select mode to quickly select, manage, and delete groups of tabs at once.
 * **Beautiful Customization**: Express your spaces using **27 premium Lucide icons** and **18 modern color swatches**. The UI is hyper-optimized for the narrow side-panel format.
-* **Full Data Portability**: Export your workspace data as a JSON backup, and import it anywhere.
+* **Selective Export & Import**: Export specific workspaces as a JSON backup, and import them anywhere.
 * **Dark Mode**: Gorgeous out-of-the-box Dark and Light mode themes that sync to your OS or can be toggled manually.
 
 ---
@@ -88,5 +92,5 @@ Tabsy runs entirely locally on your machine.
 ---
 
 <div align="center">
-  <p>Built for version 1.2.0</p>
+  <p>Built for version 1.3.0</p>
 </div>

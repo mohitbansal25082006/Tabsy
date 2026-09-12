@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Workspace, Tab } from '../types/workspace';
 import { tabService } from '../services/tabService';
 import { workspaceService } from '../services/workspaceService';
@@ -7,7 +7,7 @@ import { TabItem } from './TabItem';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { getIconComponent } from '../utils/iconMap';
-import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus } from 'lucide-react';
+import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus, Download } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -25,6 +25,7 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
   const [newIcon, setNewIcon] = useState(workspace.icon);
   const [newColor, setNewColor] = useState(workspace.color);
   const [newCategory, setNewCategory] = useState(workspace.category || '');
+  const [newNote, setNewNote] = useState(workspace.note || '');
   
   const [showMenu, setShowMenu] = useState(false);
   const [showRestoreMenu, setShowRestoreMenu] = useState(false);
@@ -83,14 +84,16 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
   const handleEditSubmit = async () => {
     const trimmed = newName.trim();
     const trimmedCategory = newCategory.trim();
-    if (trimmed && (trimmed !== workspace.name || newIcon !== workspace.icon || newColor !== workspace.color || trimmedCategory !== (workspace.category || ''))) {
-      await workspaceService.updateWorkspaceMetadata(workspace.id, trimmed, newIcon, newColor, trimmedCategory);
-      onUpdate({ ...workspace, name: trimmed, icon: newIcon, color: newColor, category: trimmedCategory === '' ? undefined : trimmedCategory, updatedAt: Date.now() });
+    const trimmedNote = newNote.trim();
+    if (trimmed && (trimmed !== workspace.name || newIcon !== workspace.icon || newColor !== workspace.color || trimmedCategory !== (workspace.category || '') || trimmedNote !== (workspace.note || ''))) {
+      await workspaceService.updateWorkspaceMetadata(workspace.id, trimmed, newIcon, newColor, trimmedCategory, trimmedNote || undefined);
+      onUpdate({ ...workspace, name: trimmed, icon: newIcon, color: newColor, category: trimmedCategory === '' ? undefined : trimmedCategory, note: trimmedNote || undefined, updatedAt: Date.now() });
     } else {
       setNewName(workspace.name);
       setNewIcon(workspace.icon);
       setNewColor(workspace.color);
       setNewCategory(workspace.category || '');
+      setNewNote(workspace.note || '');
     }
     setIsEditing(false);
   };
@@ -104,6 +107,7 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
       setNewIcon(workspace.icon);
       setNewColor(workspace.color);
       setNewCategory(workspace.category || '');
+      setNewNote(workspace.note || '');
       setIsEditing(false);
     }
   };
@@ -215,14 +219,28 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             <span className="flex-shrink-0" style={{ color: workspace.color }}>{getIconComponent(workspace.icon, 18)}</span>
             <span className="truncate">{workspace.name}</span>
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 truncate flex items-center gap-1">
-            {workspace.tabs.length} {workspace.tabs.length === 1 ? 'tab' : 'tabs'}
+          <div className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 truncate flex items-center gap-1 flex-wrap">
+            <span>{workspace.tabs.length} {workspace.tabs.length === 1 ? 'tab' : 'tabs'}</span>
+            
+            {workspace.note && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 mx-1" />
+                <span 
+                  className="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800/50 cursor-pointer max-w-[150px] truncate"
+                  onClick={() => setIsEditing(true)}
+                  title="Click to edit note"
+                >
+                  {workspace.note}
+                </span>
+              </>
+            )}
+
             {restoreFeedback && (
-              <span className="text-green-600 dark:text-green-400 animate-in fade-in zoom-in slide-in-from-left-2 truncate">
-                â€¢ {restoreFeedback}
+              <span className="text-green-600 dark:text-green-400 animate-in fade-in zoom-in slide-in-from-left-2 truncate ml-1">
+                • {restoreFeedback}
               </span>
             )}
-          </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -322,6 +340,25 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
                     <Copy size={14} />
                     Duplicate Workspace
                   </button>
+                  <button
+                    onClick={async () => {
+                      setShowMenu(false);
+                      const data = await workspaceService.exportWorkspaces([workspace.id]);
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `tabsy-workspace-${workspace.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium flex items-center gap-2 transition-colors"
+                  >
+                    <Download size={14} />
+                    Export this Workspace
+                  </button>
                   <div className="h-px bg-gray-100 dark:bg-gray-700 my-1"></div>
                   <button
                     onClick={() => {
@@ -369,6 +406,20 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
                 <option key={cat} value={cat} />
               ))}
             </datalist>
+          </div>
+          <div className="mb-4">
+            <label htmlFor="edit-note" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Note (Optional)
+            </label>
+            <input
+              id="edit-note"
+              type="text"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full font-medium text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              placeholder="e.g. Waiting on client reply..."
+            />
           </div>
           <div className="space-y-4 mb-4">
             <div>
@@ -476,6 +527,11 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
                             selectionMode={selectionMode}
                             isSelected={selectedTabs.has(tab.id)}
                             onToggleSelect={toggleTabSelection}
+                            onUpdateTab={async (updatedTab) => {
+                              const newTabs = workspace.tabs.map(t => t.id === updatedTab.id ? updatedTab : t);
+                              await workspaceService.updateWorkspaceTabs(workspace.id, newTabs);
+                              onUpdate({ ...workspace, tabs: newTabs, updatedAt: Date.now() });
+                            }}
                           />
                         ))}
                       </ul>

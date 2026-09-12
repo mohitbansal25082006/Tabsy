@@ -5,7 +5,19 @@ export const tabService = {
   async getCurrentWindowTabs(): Promise<Tab[]> {
     try {
       const tabs = await chrome.tabs.query({ currentWindow: true });
+      const groups = new Map<number, chrome.tabGroups.TabGroup>();
       
+      try {
+        if (chrome.tabGroups) {
+          const tabGroups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+          for (const g of tabGroups) {
+            groups.set(g.id, g);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to query tab groups', e);
+      }
+
       // Filter out extension internal URLs and chrome:// pages
       const filteredTabs = tabs.filter(tab => {
         const url = tab.url || '';
@@ -15,23 +27,37 @@ export const tabService = {
         return true;
       });
 
-      return filteredTabs.map(tab => ({
-        id: generateId(), // or tab.id.toString(), but generateId is safer for persistence
-        title: tab.title || 'Untitled',
-        url: tab.url || '',
-        favicon: tab.favIconUrl,
-        pinned: tab.pinned || false,
-        position: tab.index
-      }));
+      return filteredTabs.map(tab => {
+        let groupInfo = undefined;
+        if (tab.groupId && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+          const g = groups.get(tab.groupId);
+          if (g) {
+            groupInfo = {
+              title: g.title,
+              color: g.color as string
+            };
+          }
+        }
+
+        return {
+          id: generateId(),
+          title: tab.title || 'Untitled',
+          url: tab.url || '',
+          favicon: tab.favIconUrl,
+          pinned: tab.pinned || false,
+          position: tab.index,
+          group: groupInfo
+        };
+      });
     } catch (error) {
       console.error('Failed to get current window tabs:', error);
       return [];
     }
   },
 
-  async openTab(url: string, pinned: boolean = false): Promise<void> {
+  async openTab(url: string, pinned: boolean = false): Promise<chrome.tabs.Tab> {
     try {
-      await chrome.tabs.create({ url, pinned });
+      return await chrome.tabs.create({ url, pinned });
     } catch (error) {
       console.error(`Failed to open tab ${url}:`, error);
       throw error;
