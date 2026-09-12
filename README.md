@@ -160,7 +160,7 @@ service cloud.firestore {
     }
     match /shared_workspaces/{shareId} {
       allow read: if true;
-      allow create: if request.auth != null;
+      allow create: if true;
       allow update, delete: if false;
     }
   }
