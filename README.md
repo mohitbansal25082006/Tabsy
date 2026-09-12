@@ -109,7 +109,7 @@ Tabsy is built with **React**, **Tailwind CSS**, and **Lucide Icons** to feel pr
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/tabsy.git
+git clone https://github.com/mohitbansal25082006/Tabsy.git
 cd tabsy
 
 # 2. Install dependencies
