@@ -7,7 +7,8 @@ import { TabItem } from './TabItem';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { getIconComponent } from '../utils/iconMap';
-import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus, Download, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MoreVertical, RefreshCw, Edit2, Trash2, Copy, Power, CheckSquare, X, ExternalLink, Plus, Download, Loader2, CheckCircle, Info } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -269,19 +270,29 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             {showRestoreMenu && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setShowRestoreMenu(false)}></div>
-                <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-30 py-1 animate-in fade-in zoom-in-95 duration-100">
                   <button
                     onClick={() => { setShowRestoreMenu(false); handleRestore('add'); }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col"
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col group"
                   >
-                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Add to current window</span>
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center justify-between w-full">
+                      Add to current window
+                      <Tooltip content="Opens all tabs in this workspace into your current window without closing your existing tabs." position="left">
+                        <Info className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                      </Tooltip>
+                    </span>
                     <span className="text-[10px] text-gray-500 dark:text-gray-400">Keeps existing tabs, skips duplicates</span>
                   </button>
                   <button
                     onClick={() => { setShowRestoreMenu(false); handleRestore('replace'); }}
-                    className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex flex-col border-t border-gray-100 dark:border-gray-700"
+                    className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex flex-col border-t border-gray-100 dark:border-gray-700 group"
                   >
-                    <span className="text-sm font-semibold text-red-600 dark:text-red-400">Replace current window</span>
+                    <span className="text-sm font-semibold text-red-600 dark:text-red-400 flex items-center justify-between w-full">
+                      Replace current window
+                      <Tooltip content="Forces a clean slate by instantly closing any tab that doesn't belong to this workspace." position="left">
+                        <Info className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                      </Tooltip>
+                    </span>
                     <span className="text-[10px] text-red-500/70 dark:text-red-400/70">Closes tabs not in this workspace</span>
                   </button>
                 </div>
@@ -301,14 +312,19 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)}></div>
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-30 py-1 animate-in fade-in zoom-in-95 duration-100">
                   <button
                     onClick={handleUpdateTabs}
                     disabled={isUpdating}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium disabled:opacity-50 flex items-center gap-2 transition-colors"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors disabled:opacity-50 group"
                   >
-                    <RefreshCw size={14} className={isUpdating ? "animate-spin" : ""} />
-                    Update with open tabs
+                    <span className="flex items-center gap-2">
+                      <RefreshCw size={14} className={isUpdating ? 'animate-spin' : ''} />
+                      Update with open tabs
+                    </span>
+                    <Tooltip content="Replaces the tabs in this workspace with the tabs currently open in your window." position="left">
+                      <Info className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </Tooltip>
                   </button>
                   <button
                     onClick={() => {
@@ -360,10 +376,15 @@ export function WorkspaceDetails({ workspace, onBack, onUpdate, onDuplicateReque
                         alert(e.message || "Failed to share workspace.");
                       }
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 font-medium flex items-center gap-2 transition-colors border-t border-gray-100 dark:border-gray-700 mt-1 pt-2"
+                    className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 font-medium flex items-center justify-between transition-colors border-t border-gray-100 dark:border-gray-700 mt-1 pt-2 group"
                   >
-                    <ExternalLink size={14} />
-                    Share Workspace Link
+                    <span className="flex items-center gap-2">
+                      <ExternalLink size={14} />
+                      Share Workspace Link
+                    </span>
+                    <Tooltip content="Generates a 6-character code that anyone can use to import this workspace." position="left">
+                      <Info className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </Tooltip>
                   </button>
                   <button
                     onClick={async () => {

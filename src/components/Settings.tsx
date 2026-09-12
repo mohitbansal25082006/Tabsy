@@ -3,9 +3,10 @@ import { useSettings } from '../hooks/useSettings';
 import { Theme, Workspace } from '../types/workspace';
 import { workspaceService } from '../services/workspaceService';
 import { ConfirmDialog } from './ConfirmDialog';
-import { ArrowLeft, Download, Upload, CheckSquare, Square, X, Layers, BarChart3, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Upload, CheckSquare, Square, X, Layers, BarChart3, Loader2, Info } from 'lucide-react';
 import { DuplicateManager } from './DuplicateManager';
 import { getIconComponent } from '../utils/iconMap';
+import { Tooltip } from './Tooltip';
 
 interface SettingsProps {
   onBack: () => void;
@@ -212,7 +213,12 @@ export function SettingsView({ onBack, onImportSuccess, onViewInsights, onImport
                 ) : (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Sync with Firebase</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Sync with Firebase</span>
+                        <Tooltip content="Securely backs up and syncs your workspaces across all your Chrome browsers in real-time." position="top">
+                          <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help transition-colors" />
+                        </Tooltip>
+                      </div>
                       <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Real-time cross-device sync</span>
                     </div>
                     <button 
@@ -297,9 +303,12 @@ export function SettingsView({ onBack, onImportSuccess, onViewInsights, onImport
                     <span className="p-1 bg-blue-100 dark:bg-blue-900/40 rounded-md group-hover:scale-110 transition-transform">
                       <Layers size={14} />
                     </span>
-                    Manage Cross-Workspace Duplicates
+                    Manage Identical Tabs
+                    <Tooltip content="Scan all your workspaces to find and safely merge duplicate tabs." position="top">
+                      <Info className="w-4 h-4 text-blue-400/70 hover:text-blue-500 cursor-help transition-colors" />
+                    </Tooltip>
                   </span>
-                  <span className="transform group-hover:translate-x-1 transition-transform">&rarr;</span>
+                  <ArrowLeft size={16} className="rotate-180 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </button>
               </div>
             </section>
@@ -340,7 +349,12 @@ export function SettingsView({ onBack, onImportSuccess, onViewInsights, onImport
                 </button>
 
                 <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent my-3"></div>
-                
+                <div className="flex items-center gap-1.5 mb-2 px-1">
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Import Shared Workspace</span>
+                  <Tooltip content="Paste a 6-character Share ID here to instantly download a workspace shared with you." position="top">
+                    <Info className="w-3.5 h-3.5 text-gray-400 hover:text-blue-500 cursor-help transition-colors" />
+                  </Tooltip>
+                </div>
                 <div className="flex gap-2">
                   <input 
                     type="text"

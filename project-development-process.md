@@ -136,8 +136,10 @@ Version 1.4 bridges the gap between single-device isolation and true multi-devic
 * **Share Workspaces via Link**: Generate a short, secure 6-character code to share specific workspaces with colleagues or friends, completely bypassing manual JSON file exports.
 * **Seamless Import Flow**: Paste a Share ID in Settings to instantly pull down a shared workspace. The app handles this with beautiful, full-screen blurred overlays and animated transitions that drop you directly into your new workspace.
 * **Auth-Protected UI**: Cloud features are elegantly locked behind an un-obtrusive Sign-In gate within Settings, ensuring zero friction for users who prefer to remain strictly local.
+* **Interactive Tooltips**: Added a sleek, custom-built tooltip system utilizing `lucide-react` info icons. These tooltips provide rich context for complex features (e.g., advanced restore modes, cloud sync, duplicate managers) and gracefully break out of nested dropdown menus without getting clipped.
 
 ### Key Files Created & Updated
+* `src/components/Tooltip.tsx` (Created)
 * `src/components/Insights.tsx` (Created)
 * `src/services/cloudSyncService.ts` (Created)
 * `src/config/firebase.ts` (Created)
